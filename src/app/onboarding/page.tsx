@@ -37,6 +37,7 @@ export default function OnboardingPage() {
     { skill: "", category: "other", description: "" },
   ]);
   const [openToNegotiation, setOpenToNegotiation] = useState(true);
+  const [openToCash, setOpenToCash] = useState(false);
   const { signIn } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -78,6 +79,7 @@ export default function OnboardingPage() {
             description: o.description.trim() || undefined,
           })),
           openToNegotiation,
+          openToCash,
         }),
       });
 
@@ -275,6 +277,28 @@ export default function OnboardingPage() {
             </button>
           </div>
 
+          {/* Open to cash toggle */}
+          <div className="card p-4 mt-4 flex items-center justify-between">
+            <div>
+              <div className="font-medium text-sm">Accept cash payments?</div>
+              <div className="text-xs text-[var(--fg-secondary)]">
+                Let people know you&apos;re willing to accept cash alongside trades
+              </div>
+            </div>
+            <button
+              onClick={() => setOpenToCash(!openToCash)}
+              className={`w-12 h-7 rounded-full transition-colors relative ${
+                openToCash ? "bg-[var(--primary)]" : "bg-[var(--card-border)]"
+              }`}
+            >
+              <div
+                className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${
+                  openToCash ? "left-6" : "left-1"
+                }`}
+              />
+            </button>
+          </div>
+
           <div className="mt-6 flex justify-between">
             <button onClick={() => setStep(1)} className="btn-secondary">
               ← Back
@@ -321,11 +345,18 @@ export default function OnboardingPage() {
                 </span>
               ))}
             </div>
-            {openToNegotiation && (
-              <div className="mt-3 pill bg-[var(--warm-light)] text-[var(--warm)]">
-                Open to other requests
-              </div>
-            )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              {openToNegotiation && (
+                <span className="pill bg-[var(--warm-light)] text-[var(--warm)]">
+                  Open to other requests
+                </span>
+              )}
+              {openToCash && (
+                <span className="pill bg-[var(--success-light)] text-[var(--success)]">
+                  Accepts cash payments
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="flex justify-between">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { MultiTrade, UserPost, AgentStep } from "@/lib/types";
 import TradeRingCard from "@/components/TradeRing";
 import AgentSteps from "@/components/AgentSteps";
@@ -16,8 +16,9 @@ export default function MatchesPage() {
     processingTimeMs: number;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const hasRun = useRef(false);
 
-  const runAgent = async () => {
+  const runAgent = useCallback(async () => {
     setLoading(true);
     setError(null);
     setRings([]);
@@ -48,7 +49,14 @@ export default function MatchesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!hasRun.current) {
+      hasRun.current = true;
+      runAgent();
+    }
+  }, [runAgent]);
 
   const handleAction = async (ringId: string, userId: string, action: "accept" | "decline") => {
     try {
@@ -107,7 +115,7 @@ export default function MatchesPage() {
           </div>
         </div>
         <span className="pill bg-[var(--primary-light)] text-[var(--primary)]">
-          {rings.filter((r) => r.status === "pending_all").length} pending
+          {rings.filter((r) => r.participants.length >= 3 && r.status === "pending_all").length} pending
         </span>
       </div>
 
@@ -142,26 +150,28 @@ export default function MatchesPage() {
         </div>
       )}
 
-      {/* Trade Rings */}
-      {rings.length > 0 && (
+      {/* Trade Rings (3+ participants only) */}
+      {rings.filter((r) => r.participants.length >= 3).length > 0 && (
         <div className="space-y-5">
           <h2 className="text-lg font-semibold">
-            Discovered rings ({rings.length})
+            Discovered rings ({rings.filter((r) => r.participants.length >= 3).length})
           </h2>
-          {rings.map((ring) => (
-            <TradeRingCard
-              key={ring.id}
-              ring={ring}
-              posts={posts}
-              onAccept={(id, userId) => handleAction(id, userId, "accept")}
-              onDecline={(id, userId) => handleAction(id, userId, "decline")}
-            />
-          ))}
+          {rings
+            .filter((r) => r.participants.length >= 3)
+            .map((ring) => (
+              <TradeRingCard
+                key={ring.id}
+                ring={ring}
+                posts={posts}
+                onAccept={(id, userId) => handleAction(id, userId, "accept")}
+                onDecline={(id, userId) => handleAction(id, userId, "decline")}
+              />
+            ))}
         </div>
       )}
 
       {/* Empty / Initial states */}
-      {!loading && rings.length === 0 && stats && (
+      {!loading && rings.filter((r) => r.participants.length >= 3).length === 0 && stats && (
         <div className="text-center py-16 text-[var(--muted)]">
           <div className="text-4xl mb-3">🔍</div>
           <p className="font-semibold">No trade rings found</p>

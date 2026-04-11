@@ -19,6 +19,18 @@ export default function NavBar() {
         </a>
         <div className="flex items-center gap-1">
           <a
+            href="/"
+            className="px-3.5 py-2 rounded-lg text-sm text-[var(--fg-secondary)] hover:text-[var(--fg)] hover:bg-[var(--bg-secondary)] transition-all"
+          >
+            Home
+          </a>
+          <a
+            href="/about"
+            className="px-3.5 py-2 rounded-lg text-sm text-[var(--fg-secondary)] hover:text-[var(--fg)] hover:bg-[var(--bg-secondary)] transition-all"
+          >
+            About
+          </a>
+          <a
             href="/marketplace"
             className="px-3.5 py-2 rounded-lg text-sm text-[var(--fg-secondary)] hover:text-[var(--fg)] hover:bg-[var(--bg-secondary)] transition-all"
           >
@@ -41,13 +53,6 @@ export default function NavBar() {
           >
             Trade Rings
           </a>
-          <a
-            href="/trust"
-            className="px-3.5 py-2 rounded-lg text-sm text-[var(--fg-secondary)] hover:text-[var(--fg)] hover:bg-[var(--bg-secondary)] transition-all"
-          >
-            Trust
-          </a>
-
           {/* Auth-aware CTA */}
           {!loading && !profile && (
             <>

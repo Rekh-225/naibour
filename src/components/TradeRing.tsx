@@ -59,45 +59,50 @@ export default function TradeRingCard({ ring, posts, onAccept, onDecline }: Trad
 
       {/* Ring SVG */}
       <div className="relative mb-4">
-        <svg
-          viewBox={`0 0 400 ${Math.max(160, participants.length * 45)}`}
-          className="w-full"
-          style={{ maxHeight: "280px" }}
-        >
-          {ring.edges.map((edge, i) => {
-            const fromIdx = ring.participants.indexOf(edge.fromUserId);
-            const toIdx = ring.participants.indexOf(edge.toUserId);
-            const total = participants.length;
-            const cx = 200, cy = Math.max(80, total * 22);
-            const r = Math.min(110, Math.max(55, total * 22));
-            const a1 = (fromIdx / total) * 2 * Math.PI - Math.PI / 2;
-            const a2 = (toIdx / total) * 2 * Math.PI - Math.PI / 2;
-            return (
-              <g key={`e-${i}`}>
-                <line
-                  x1={cx + r * Math.cos(a1)} y1={cy + r * Math.sin(a1)}
-                  x2={cx + r * Math.cos(a2)} y2={cy + r * Math.sin(a2)}
-                  stroke="var(--primary)" strokeWidth="1.5" opacity={0.25} className="ring-line"
-                />
-              </g>
-            );
-          })}
-          {participants.map((p, i) => {
-            const total = participants.length;
-            const cx = 200, cy = Math.max(80, total * 22);
-            const r = Math.min(110, Math.max(55, total * 22));
-            const a = (i / total) * 2 * Math.PI - Math.PI / 2;
-            const x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
-            const accepted = ring.acceptedBy.includes(p.id);
-            return (
-              <g key={p.id}>
-                <circle cx={x} cy={y} r="22" fill={p.avatarColor || "var(--primary-light)"} stroke={accepted ? "var(--success)" : "var(--card-border)"} strokeWidth="2" />
-                <text x={x} y={y - 3} textAnchor="middle" fill="var(--fg)" fontSize="9" fontWeight="600">{p.userName.split(" ")[0]}</text>
-                <text x={x} y={y + 8} textAnchor="middle" fill="var(--muted)" fontSize="7">{accepted ? "✓" : `★${p.trustScore.toFixed(1)}`}</text>
-              </g>
-            );
-          })}
-        </svg>
+        {(() => {
+          const total = participants.length;
+          const nodeR = 22;
+          const pad = 8;
+          const cx = 200;
+          const layoutR = Math.min(110, Math.max(55, total * 22));
+          const cy = layoutR + nodeR + pad;
+          const svgH = cy + layoutR + nodeR + pad;
+          return (
+            <svg
+              viewBox={`0 0 400 ${svgH}`}
+              className="w-full"
+              style={{ maxHeight: "280px" }}
+            >
+              {ring.edges.map((edge, i) => {
+                const fromIdx = ring.participants.indexOf(edge.fromUserId);
+                const toIdx = ring.participants.indexOf(edge.toUserId);
+                const a1 = (fromIdx / total) * 2 * Math.PI - Math.PI / 2;
+                const a2 = (toIdx / total) * 2 * Math.PI - Math.PI / 2;
+                return (
+                  <g key={`e-${i}`}>
+                    <line
+                      x1={cx + layoutR * Math.cos(a1)} y1={cy + layoutR * Math.sin(a1)}
+                      x2={cx + layoutR * Math.cos(a2)} y2={cy + layoutR * Math.sin(a2)}
+                      stroke="var(--primary)" strokeWidth="1.5" opacity={0.25} className="ring-line"
+                    />
+                  </g>
+                );
+              })}
+              {participants.map((p, i) => {
+                const a = (i / total) * 2 * Math.PI - Math.PI / 2;
+                const x = cx + layoutR * Math.cos(a), y = cy + layoutR * Math.sin(a);
+                const accepted = ring.acceptedBy.includes(p.id);
+                return (
+                  <g key={p.id}>
+                    <circle cx={x} cy={y} r={nodeR} fill={p.avatarColor || "var(--primary-light)"} stroke={accepted ? "var(--success)" : "var(--card-border)"} strokeWidth="2" />
+                    <text x={x} y={y - 3} textAnchor="middle" fill="var(--fg)" fontSize="9" fontWeight="600">{p.userName.split(" ")[0]}</text>
+                    <text x={x} y={y + 8} textAnchor="middle" fill="var(--muted)" fontSize="7">{accepted ? "✓" : `★${p.trustScore.toFixed(1)}`}</text>
+                  </g>
+                );
+              })}
+            </svg>
+          );
+        })()}
       </div>
 
       {/* Edge details */}

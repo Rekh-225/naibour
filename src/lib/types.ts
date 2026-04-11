@@ -24,6 +24,7 @@ export interface UserProfile {
   bio?: string;
   offerings: Offering[];
   openToNegotiation: boolean;     // willing to discuss unlisted services
+  openToCash: boolean;            // willing to accept cash payments
   trustScore: number;
   verified: boolean;              // KYC verified
   linkedSocials?: string[];       // e.g. ["linkedin", "facebook"]

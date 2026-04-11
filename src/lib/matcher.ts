@@ -2,7 +2,7 @@ import { UserPost, GraphEdge, MultiTrade } from "./types";
 import { batchScoreCompatibility } from "./gemini";
 
 // ─── Config ────────────────────────────────────────────────────────
-const MIN_EDGE_CONFIDENCE = 0.40;
+const MIN_EDGE_CONFIDENCE = 0.50;
 const MAX_CYCLE_LENGTH = 4;
 const MIN_CYCLE_LENGTH = 2;
 const TOP_EDGES_PER_PAIR = 3;
@@ -75,10 +75,11 @@ function scoreEdge(
   } else if (offerNorm.includes(needNorm) || needNorm.includes(offerNorm)) {
     semanticScore = 0.85; // substring match
   } else {
-    // Token overlap
+    // Token overlap — exclude generic format words that create false matches
+    const GENERIC_TOKENS = new Set(["lessons", "tutoring", "repair", "help", "coaching", "training", "services", "assistance", "session", "sessions", "class", "classes", "workshop", "instruction"]);
     const offerTokens = new Set(offerNorm.split(" "));
     const needTokens = new Set(needNorm.split(" "));
-    const overlap = [...offerTokens].filter((t) => needTokens.has(t) && t.length > 2).length;
+    const overlap = [...offerTokens].filter((t) => needTokens.has(t) && t.length > 2 && !GENERIC_TOKENS.has(t)).length;
     const maxTokens = Math.max(offerTokens.size, needTokens.size);
     semanticScore = maxTokens > 0 ? (overlap / maxTokens) * 0.7 : 0;
   }
@@ -203,12 +204,18 @@ export async function buildCompatibilityGraph(
       geminiResults.push(...results);
     }
 
-    // Blend local + Gemini scores (40% local, 60% Gemini)
+    // Blend local + Gemini scores — Gemini has veto power on bad matches
     for (let i = 0; i < retained.length; i++) {
       const gemini = geminiResults[i];
-      if (gemini && gemini.score > 0) {
-        retained[i].confidence = Math.round((0.4 * retained[i].confidence + 0.6 * gemini.score) * 100) / 100;
-        retained[i].reasoning = gemini.reasoning;
+      if (gemini) {
+        if (gemini.score <= 0.15) {
+          // Gemini says this is NOT a match — kill it regardless of heuristic
+          retained[i].confidence = 0;
+          retained[i].reasoning = gemini.reasoning || "Not a match";
+        } else {
+          retained[i].confidence = Math.round((0.3 * retained[i].confidence + 0.7 * gemini.score) * 100) / 100;
+          retained[i].reasoning = gemini.reasoning;
+        }
       }
     }
 

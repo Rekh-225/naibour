@@ -218,6 +218,11 @@ export default function MarketplacePage() {
                       open to requests
                     </span>
                   )}
+                  {need.profile.openToCash && (
+                    <span className="pill bg-[var(--success-light)] text-[var(--success)] text-[10px]">
+                      accepts cash
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -264,6 +269,9 @@ export default function MarketplacePage() {
                   </div>
                   {p.openToNegotiation && (
                     <span className="pill bg-[var(--warm-light)] text-[var(--warm)]">flexible</span>
+                  )}
+                  {p.openToCash && (
+                    <span className="pill bg-[var(--success-light)] text-[var(--success)]">💵 cash</span>
                   )}
                 </div>
                 {p.bio && (

@@ -10,7 +10,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userName, neighborhood, bio, offerings, openToNegotiation } = body;
+    const { userName, neighborhood, bio, offerings, openToNegotiation, openToCash } = body;
 
     if (!userName || !offerings || offerings.length === 0) {
       return NextResponse.json(
@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
         } as Offering)
       ),
       openToNegotiation: openToNegotiation ?? true,
+      openToCash: openToCash ?? false,
       trustScore: 1.0, // new users start at 1.0
       verified: false,
       createdAt: new Date().toISOString(),
