@@ -297,44 +297,82 @@ export const SEED_PROFILES: UserProfile[] = [
 ];
 
 // ─── Sample Need Posts ────────────────────────────────────────────
+//
+// RING DESIGN — these needs + profile offerings form guaranteed cycles:
+//
+// 2-WAY #1: Anna(prof-1) offers "Dog walking" → Bence needs it
+//           Bence(prof-2) offers "Personal tax filing" → Anna needs it
+//
+// 3-WAY #1: Eszter(prof-5) offers "Deep cleaning" → Clara needs it
+//           Clara(prof-3) offers "Math tutoring" → Dávid needs it
+//           Dávid(prof-4) offers "Furniture assembly" → Eszter needs a website... no,
+//             → Gréta needs it, and Gréta offers elder care → but let's keep it clean:
+//           Dávid(prof-4) offers "Plumbing repairs" → Eszter needs plumbing (new need)
+//             ... actually let's be explicit:
+//
+// 3-WAY #1: Clara(prof-3) offers "Math tutoring" → Dávid(prof-4) needs "math tutoring"
+//           Dávid(prof-4) offers "Furniture assembly" → Gréta(prof-7) needs "furniture assembly"
+//           Gréta(prof-7) offers "Errand running" → Clara(prof-3) needs "errand running"
+//
+// 3-WAY #2: Hanna(prof-8) offers "Professional headshots" → István(prof-9) needs "headshots"
+//           István(prof-9) offers "Hungarian home cooking" → Judit(prof-10) needs "home cooking"
+//           Judit(prof-10) offers "Logo design" → Hanna(prof-8) needs "logo design"
+//
+// 4-WAY #1: Kristóf(prof-11) offers "Guitar lessons" → Laura(prof-12) needs "guitar lessons"
+//           Laura(prof-12) offers "Group yoga classes" → Márton(prof-13) needs "yoga"
+//           Márton(prof-13) offers "Bike repair" → Nóra(prof-14) needs "bike repair"
+//           Nóra(prof-14) offers "Hungarian → English translation" → Kristóf(prof-11) needs "translation"
+//
+// 3-WAY #3: Eszter(prof-5) offers "Deep cleaning" → Clara(prof-3) needs "deep cleaning"
+//           Clara(prof-3) offers "Physics tutoring" → Ferenc(prof-6) needs "physics tutoring"
+//           Ferenc(prof-6) offers "Website development" → Eszter(prof-5) needs "website"
+//
 
 export const SEED_NEEDS: NeedPost[] = [
+  // Anna needs tax filing → Bence offers it (2-way ring #1)
   {
     id: "need-1",
     profileId: "prof-1",
     rawNeed: "I need help with my personal tax filing this month — it's due soon and I'm lost",
-    parsedNeeds: [{ skill: "tax filing assistance", category: "finance" }],
+    parsedNeeds: [{ skill: "personal tax filing", category: "finance" }],
     urgency: "high",
     status: "open",
     createdAt: new Date().toISOString(),
   },
+  // Bence needs dog walking → Anna offers it (2-way ring #1)
   {
     id: "need-2",
     profileId: "prof-2",
     rawNeed: "I need someone to walk my dog 3 times a week — I travel for work",
-    parsedNeeds: [{ skill: "dog walking", category: "pet care", availability: "3x per week" }],
+    parsedNeeds: [{ skill: "dog walking", category: "pet care" }],
     urgency: "medium",
     status: "open",
     createdAt: new Date().toISOString(),
   },
+  // Clara needs deep cleaning → Eszter offers it (3-way ring #3) + errand running → Gréta offers (3-way #1)
   {
     id: "need-3",
     profileId: "prof-3",
-    rawNeed: "I need my apartment deep-cleaned before my parents visit next weekend",
-    parsedNeeds: [{ skill: "deep cleaning", category: "home services" }],
+    rawNeed: "I need my apartment deep-cleaned before my parents visit, and someone to run some errands for me",
+    parsedNeeds: [
+      { skill: "deep cleaning", category: "home services" },
+      { skill: "errand running", category: "errands" },
+    ],
     urgency: "high",
     status: "open",
     createdAt: new Date().toISOString(),
   },
+  // Dávid needs math tutoring → Clara offers it (3-way ring #1)
   {
     id: "need-4",
     profileId: "prof-4",
-    rawNeed: "I need math tutoring for my daughter's university entrance exam — she needs help with calculus",
+    rawNeed: "I need math tutoring for my daughter's university entrance exam",
     parsedNeeds: [{ skill: "math tutoring", category: "education" }],
     urgency: "medium",
     status: "open",
     createdAt: new Date().toISOString(),
   },
+  // Eszter needs website development → Ferenc offers it (3-way ring #3)
   {
     id: "need-5",
     profileId: "prof-5",
@@ -344,15 +382,20 @@ export const SEED_NEEDS: NeedPost[] = [
     status: "open",
     createdAt: new Date().toISOString(),
   },
+  // Ferenc needs physics tutoring → Clara offers it (3-way ring #3) + elder care → Gréta offers
   {
     id: "need-6",
     profileId: "prof-6",
-    rawNeed: "I need someone to help my elderly mother with grocery shopping twice a week",
-    parsedNeeds: [{ skill: "grocery shopping assistance", category: "elder care", availability: "2x per week" }],
+    rawNeed: "I need a physics tutor for my son, and someone to help my elderly mother with grocery shopping",
+    parsedNeeds: [
+      { skill: "physics tutoring", category: "education" },
+      { skill: "grocery shopping for elderly", category: "elder care" },
+    ],
     urgency: "high",
     status: "open",
     createdAt: new Date().toISOString(),
   },
+  // Gréta needs furniture assembly → Dávid offers it (3-way ring #1)
   {
     id: "need-7",
     profileId: "prof-7",
@@ -362,15 +405,20 @@ export const SEED_NEEDS: NeedPost[] = [
     status: "open",
     createdAt: new Date().toISOString(),
   },
+  // Hanna needs logo design → Judit offers it (3-way ring #2)
   {
     id: "need-8",
     profileId: "prof-8",
-    rawNeed: "I need someone to fix a leaky faucet and repaint my kitchen — landlord won't do it",
-    parsedNeeds: [{ skill: "plumbing repairs", category: "home services" }, { skill: "interior painting", category: "home services" }],
+    rawNeed: "I need a logo designed for my photography business and some interior painting done",
+    parsedNeeds: [
+      { skill: "logo design", category: "creative services" },
+      { skill: "interior painting", category: "home services" },
+    ],
     urgency: "medium",
     status: "open",
     createdAt: new Date().toISOString(),
   },
+  // István needs professional headshots → Hanna offers them (3-way ring #2)
   {
     id: "need-9",
     profileId: "prof-9",
@@ -380,24 +428,27 @@ export const SEED_NEEDS: NeedPost[] = [
     status: "open",
     createdAt: new Date().toISOString(),
   },
+  // Judit needs home cooking → István offers it (3-way ring #2)
   {
     id: "need-10",
     profileId: "prof-10",
     rawNeed: "I need someone to cook healthy meals for my family this week — I'm recovering from surgery",
-    parsedNeeds: [{ skill: "meal cooking", category: "food services" }, { skill: "meal prep", category: "food services" }],
+    parsedNeeds: [{ skill: "Hungarian home cooking", category: "food services" }],
     urgency: "high",
     status: "open",
     createdAt: new Date().toISOString(),
   },
+  // Kristóf needs translation → Nóra offers it (4-way ring #1)
   {
     id: "need-11",
     profileId: "prof-11",
-    rawNeed: "I need a logo and menu design for my new café opening next month",
-    parsedNeeds: [{ skill: "logo design", category: "creative services" }, { skill: "graphic design", category: "creative services" }],
+    rawNeed: "I need a Hungarian-to-English translator for my café menu and business documents",
+    parsedNeeds: [{ skill: "Hungarian → English translation", category: "language services" }],
     urgency: "medium",
     status: "open",
     createdAt: new Date().toISOString(),
   },
+  // Laura needs guitar lessons → Kristóf offers them (4-way ring #1)
   {
     id: "need-12",
     profileId: "prof-12",
@@ -407,15 +458,17 @@ export const SEED_NEEDS: NeedPost[] = [
     status: "open",
     createdAt: new Date().toISOString(),
   },
+  // Márton needs yoga → Laura offers it (4-way ring #1)
   {
     id: "need-13",
     profileId: "prof-13",
     rawNeed: "I need a yoga instructor for my office team — weekly group sessions for 6 people",
-    parsedNeeds: [{ skill: "group yoga classes", category: "fitness", availability: "weekly" }],
+    parsedNeeds: [{ skill: "group yoga classes", category: "fitness" }],
     urgency: "medium",
     status: "open",
     createdAt: new Date().toISOString(),
   },
+  // Nóra needs bike repair → Márton offers it (4-way ring #1)
   {
     id: "need-14",
     profileId: "prof-14",
@@ -425,11 +478,15 @@ export const SEED_NEEDS: NeedPost[] = [
     status: "open",
     createdAt: new Date().toISOString(),
   },
+  // Olivér needs networking / startup advice — links into other rings as alternate
   {
     id: "need-15",
     profileId: "prof-15",
-    rawNeed: "I need a Hungarian-to-English translator for my startup's business documents and investor deck",
-    parsedNeeds: [{ skill: "Hungarian → English translation", category: "language services" }],
+    rawNeed: "I need bookkeeping help and a coffee brewing workshop for my team",
+    parsedNeeds: [
+      { skill: "bookkeeping", category: "finance" },
+      { skill: "coffee brewing workshop", category: "food services" },
+    ],
     urgency: "high",
     status: "open",
     createdAt: new Date().toISOString(),

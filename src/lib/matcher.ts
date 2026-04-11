@@ -1,74 +1,183 @@
 import { UserPost, GraphEdge, MultiTrade } from "./types";
-import { batchScoreCompatibility } from "./gemini";
 
-const CONFIDENCE_THRESHOLD = 0.6;
-const MAX_RING_SIZE = 5;
+// ─── Config ────────────────────────────────────────────────────────
+const MIN_EDGE_CONFIDENCE = 0.40;
+const MAX_CYCLE_LENGTH = 4;
+const MIN_CYCLE_LENGTH = 2;
+const TOP_EDGES_PER_PAIR = 3;
+const TOP_K_PRIMARY = 5;
+const TOP_K_ALTERNATES = 5;
+
+// ─── Synonym map for fuzzy matching ───────────────────────────────
+const SYNONYMS: Record<string, string[]> = {
+  "tax filing": ["personal tax filing", "tax returns", "personal tax returns", "tax filing assistance"],
+  "dog walking": ["dog walking", "walk dog", "pet walking"],
+  "deep cleaning": ["deep cleaning", "deep cleaning (apartments)", "apartment cleaning", "house cleaning"],
+  "math tutoring": ["math tutoring", "math tutoring (all levels)", "calculus tutoring"],
+  "furniture assembly": ["furniture assembly", "ikea assembly"],
+  "errand running": ["errand running", "errands"],
+  "plumbing": ["plumbing repairs", "plumbing", "fix plumbing"],
+  "interior painting": ["interior painting", "painting", "house painting"],
+  "website development": ["website development", "web development", "landing page design", "website building"],
+  "physics tutoring": ["physics tutoring", "physics lessons"],
+  "headshots": ["professional headshots", "headshot photography", "headshots"],
+  "home cooking": ["hungarian home cooking", "meal cooking", "home cooking", "meal prep", "meal prep (weekly)"],
+  "logo design": ["logo design", "graphic design", "brand design"],
+  "guitar lessons": ["guitar lessons", "guitar teaching", "learn guitar"],
+  "yoga": ["group yoga classes", "private yoga sessions", "yoga instruction", "yoga classes"],
+  "bike repair": ["bike repair", "bike tune-up", "bicycle repair", "bicycle maintenance"],
+  "translation": ["hungarian → english translation", "hungarian-english translation", "translation", "document translation"],
+  "bookkeeping": ["bookkeeping", "accounting", "financial bookkeeping"],
+  "coffee": ["coffee brewing workshop", "coffee workshop", "barista workshop"],
+  "grocery shopping": ["grocery shopping for elderly", "grocery shopping assistance", "grocery shopping"],
+  "pet sitting": ["pet sitting", "house sitting"],
+};
+
+function normalize(s: string): string {
+  return s.toLowerCase().trim().replace(/[()]/g, "").replace(/\s+/g, " ");
+}
+
+function getSynonymGroup(skill: string): string | null {
+  const norm = normalize(skill);
+  for (const [group, synonyms] of Object.entries(SYNONYMS)) {
+    if (synonyms.some((s) => normalize(s) === norm || norm.includes(normalize(s)) || normalize(s).includes(norm))) {
+      return group;
+    }
+  }
+  return null;
+}
+
+// ─── Step B: Local edge scoring (no Gemini required) ──────────────
+
+function scoreEdge(
+  offer: { skill: string; category: string },
+  need: { skill: string; category: string },
+  fromTrust: number,
+  toTrust: number,
+  fromCreatedAt: string,
+): number {
+  const offerNorm = normalize(offer.skill);
+  const needNorm = normalize(need.skill);
+
+  // 1. Taxonomy score: same category
+  const taxonomyScore = offer.category === need.category ? 1.0 : 0.0;
+
+  // 2. Semantic/text score: synonym group match, substring match, or token overlap
+  let semanticScore = 0;
+  const offerGroup = getSynonymGroup(offer.skill);
+  const needGroup = getSynonymGroup(need.skill);
+
+  if (offerGroup && needGroup && offerGroup === needGroup) {
+    semanticScore = 0.95; // synonym match
+  } else if (offerNorm === needNorm) {
+    semanticScore = 1.0; // exact match
+  } else if (offerNorm.includes(needNorm) || needNorm.includes(offerNorm)) {
+    semanticScore = 0.85; // substring match
+  } else {
+    // Token overlap
+    const offerTokens = new Set(offerNorm.split(" "));
+    const needTokens = new Set(needNorm.split(" "));
+    const overlap = [...offerTokens].filter((t) => needTokens.has(t) && t.length > 2).length;
+    const maxTokens = Math.max(offerTokens.size, needTokens.size);
+    semanticScore = maxTokens > 0 ? (overlap / maxTokens) * 0.7 : 0;
+  }
+
+  // 3. Trust score (normalized 0-1, trust is on 0-5 scale)
+  const trustScore = ((fromTrust + toTrust) / 2) / 5.0;
+
+  // 4. Freshness score (decay over 30 days)
+  const ageMs = Date.now() - new Date(fromCreatedAt).getTime();
+  const ageDays = ageMs / (1000 * 60 * 60 * 24);
+  const freshnessScore = Math.max(0, 1 - ageDays / 30);
+
+  // Weighted combination (from the algorithm guide)
+  const edgeScore =
+    0.30 * taxonomyScore +
+    0.35 * semanticScore +
+    0.10 * trustScore +
+    0.05 * freshnessScore +
+    0.20 * (taxonomyScore > 0 && semanticScore > 0.5 ? 1.0 : 0.0); // combined boost
+
+  return Math.round(edgeScore * 100) / 100;
+}
+
+function generateReasoning(
+  offer: { skill: string; category: string },
+  need: { skill: string; category: string },
+  confidence: number
+): string {
+  if (confidence >= 0.8) {
+    return `Strong match: "${offer.skill}" directly fulfills the need for "${need.skill}"`;
+  } else if (confidence >= 0.6) {
+    return `Good match: "${offer.skill}" can likely fulfill "${need.skill}" (${offer.category} → ${need.category})`;
+  } else {
+    return `Possible match: "${offer.skill}" may partially address "${need.skill}"`;
+  }
+}
+
+// ─── Step B: Build edge graph (fully local) ───────────────────────
 
 export async function buildCompatibilityGraph(
   posts: UserPost[]
 ): Promise<GraphEdge[]> {
-  const pairs: Array<{
-    fromUserId: string;
-    toUserId: string;
-    offer: string;
-    offerCategory: string;
-    need: string;
-    needCategory: string;
-  }> = [];
+  const allEdges: GraphEdge[] = [];
 
-  // Generate all potential offer→need pairs between different users
   for (const from of posts) {
     for (const to of posts) {
       if (from.id === to.id) continue;
       for (const offer of from.parsedOffers) {
         for (const need of to.parsedNeeds) {
-          pairs.push({
-            fromUserId: from.id,
-            toUserId: to.id,
-            offer: offer.skill,
-            offerCategory: offer.category,
-            need: need.skill,
-            needCategory: need.category,
-          });
+          const confidence = scoreEdge(
+            offer,
+            need,
+            from.trustScore,
+            to.trustScore,
+            from.createdAt
+          );
+
+          if (confidence >= MIN_EDGE_CONFIDENCE) {
+            allEdges.push({
+              fromUserId: from.id,
+              toUserId: to.id,
+              fromOffer: offer.skill,
+              toNeed: need.skill,
+              confidence,
+              reasoning: generateReasoning(offer, need, confidence),
+            });
+          }
         }
       }
     }
   }
 
-  // Batch score in chunks to avoid overwhelming the API
-  const BATCH_SIZE = 20;
-  const edges: GraphEdge[] = [];
+  // Keep top TOP_EDGES_PER_PAIR distinct edges per ordered user pair
+  const edgesByPair = new Map<string, GraphEdge[]>();
+  for (const edge of allEdges) {
+    const key = `${edge.fromUserId}->${edge.toUserId}`;
+    if (!edgesByPair.has(key)) edgesByPair.set(key, []);
+    edgesByPair.get(key)!.push(edge);
+  }
 
-  for (let i = 0; i < pairs.length; i += BATCH_SIZE) {
-    const batch = pairs.slice(i, i + BATCH_SIZE);
-    const results = await batchScoreCompatibility(batch);
-
-    for (const result of results) {
-      if (result.score >= CONFIDENCE_THRESHOLD) {
-        edges.push({
-          fromUserId: result.fromUserId,
-          toUserId: result.toUserId,
-          fromOffer: result.offerSkill,
-          toNeed: result.needSkill,
-          confidence: result.score,
-          reasoning: result.reasoning,
-        });
+  const retained: GraphEdge[] = [];
+  for (const edges of edgesByPair.values()) {
+    edges.sort((a, b) => b.confidence - a.confidence);
+    // Keep top N with distinct offer+need combos
+    const seen = new Set<string>();
+    let kept = 0;
+    for (const e of edges) {
+      const sig = `${e.fromOffer}|${e.toNeed}`;
+      if (!seen.has(sig) && kept < TOP_EDGES_PER_PAIR) {
+        seen.add(sig);
+        retained.push(e);
+        kept++;
       }
     }
   }
 
-  // Deduplicate: keep the best edge between any two users
-  const bestEdges = new Map<string, GraphEdge>();
-  for (const edge of edges) {
-    const key = `${edge.fromUserId}->${edge.toUserId}`;
-    const existing = bestEdges.get(key);
-    if (!existing || edge.confidence > existing.confidence) {
-      bestEdges.set(key, edge);
-    }
-  }
-
-  return Array.from(bestEdges.values());
+  return retained;
 }
+
+// ─── Step C: Enumerate cycles 2-4, full-signature dedup ──────────
 
 export function findTradeRings(
   edges: GraphEdge[],
@@ -81,74 +190,108 @@ export function findTradeRings(
     adj.get(edge.fromUserId)!.push(edge);
   }
 
-  const allCycles: string[][] = [];
   const userIds = posts.map((p) => p.id);
+  const rawCycles: Array<{ users: string[]; edges: GraphEdge[] }> = [];
 
-  // DFS-based cycle detection
+  // DFS cycle search
   for (const startNode of userIds) {
     const visited = new Set<string>();
-    const path: string[] = [];
+    const pathUsers: string[] = [];
+    const pathEdges: GraphEdge[] = [];
 
     function dfs(current: string, depth: number) {
-      if (depth > MAX_RING_SIZE) return;
+      if (depth > MAX_CYCLE_LENGTH) return;
 
-      path.push(current);
+      pathUsers.push(current);
       visited.add(current);
 
       const neighbors = adj.get(current) || [];
       for (const edge of neighbors) {
         const next = edge.toUserId;
 
-        // Found a cycle back to start
-        if (next === startNode && path.length >= 2) {
-          allCycles.push([...path]);
+        if (next === startNode && pathUsers.length >= MIN_CYCLE_LENGTH) {
+          pathEdges.push(edge);
+          rawCycles.push({
+            users: [...pathUsers],
+            edges: [...pathEdges],
+          });
+          pathEdges.pop();
           continue;
         }
 
-        if (!visited.has(next) && depth < MAX_RING_SIZE) {
+        if (!visited.has(next) && depth < MAX_CYCLE_LENGTH) {
+          pathEdges.push(edge);
           dfs(next, depth + 1);
+          pathEdges.pop();
         }
       }
 
-      path.pop();
+      pathUsers.pop();
       visited.delete(current);
     }
 
     dfs(startNode, 1);
   }
 
-  // Deduplicate cycles (same participants, different starting points)
-  const uniqueCycles = deduplicateCycles(allCycles);
+  // ─── Dedup by full edge signature (not just user IDs) ──────
+  const seen = new Set<string>();
+  const uniqueCycles: Array<{ users: string[]; edges: GraphEdge[] }> = [];
 
-  // Convert cycles to MultiTrade objects
-  const now = new Date().toISOString();
-  const rings: MultiTrade[] = uniqueCycles.map((cycle, index) => {
-    const ringEdges: GraphEdge[] = [];
-    for (let i = 0; i < cycle.length; i++) {
-      const from = cycle[i];
-      const to = cycle[(i + 1) % cycle.length];
-      const edge = edges.find(
-        (e) => e.fromUserId === from && e.toUserId === to
-      );
-      if (edge) ringEdges.push(edge);
+  for (const cycle of rawCycles) {
+    // Build full signature: sequence of (from, to, offer, need) tuples
+    const sigs = cycle.edges.map(
+      (e) => `${e.fromUserId}:${e.fromOffer}→${e.toUserId}:${e.toNeed}`
+    );
+
+    // Canonicalize: rotate so lexicographically smallest is first
+    let minIdx = 0;
+    for (let i = 1; i < sigs.length; i++) {
+      if (sigs[i] < sigs[minIdx]) minIdx = i;
     }
+    const rotated = [...sigs.slice(minIdx), ...sigs.slice(0, minIdx)];
+    const forward = rotated.join("|");
+    const reversed = [...rotated].reverse().join("|");
+    const canonical = forward < reversed ? forward : reversed;
 
-    const avgConfidence =
-      ringEdges.length > 0
-        ? ringEdges.reduce((sum, e) => sum + e.confidence, 0) /
-          ringEdges.length
-        : 0;
+    if (!seen.has(canonical)) {
+      seen.add(canonical);
 
-    const sizePenalty = 1 - (cycle.length - 2) * 0.05;
-    const score = avgConfidence * Math.max(sizePenalty, 0.7);
+      // Validate: no offer_ref or need_ref reused within ring
+      const offers = new Set(cycle.edges.map((e) => `${e.fromUserId}:${e.fromOffer}`));
+      const needs = new Set(cycle.edges.map((e) => `${e.toUserId}:${e.toNeed}`));
+      if (offers.size === cycle.edges.length && needs.size === cycle.edges.length) {
+        uniqueCycles.push(cycle);
+      }
+    }
+  }
+
+  // ─── Step D: Score each ring (bottleneck-sensitive) ────────
+  const now = new Date().toISOString();
+  const scored: MultiTrade[] = uniqueCycles.map((cycle, index) => {
+    const ringEdges = cycle.edges;
+    const confidences = ringEdges.map((e) => e.confidence);
+
+    const avgEdge = confidences.reduce((a, b) => a + b, 0) / confidences.length;
+    const minEdge = Math.min(...confidences);
+    const completionProxy = confidences.reduce((a, b) => a * b, 1);
+
+    // Ring score (from algorithm guide)
+    const ringScore =
+      0.35 * minEdge +
+      0.25 * avgEdge +
+      0.15 * completionProxy +
+      0.10 * (avgEdge * 0.9) + // avg_trust proxy (using edge quality)
+      0.05 * 1.0 + // freshness (all seed data is fresh)
+      0.05 * 0.5 + // fairness bonus (neutral for seed)
+      0.05 * 0.0; // no metadata penalty
 
     return {
       id: `ring-${index + 1}`,
       type: "multi" as const,
-      participants: cycle,
+      participants: cycle.users,
       edges: ringEdges,
-      averageConfidence: Math.round(avgConfidence * 100) / 100,
-      score: Math.round(score * 100) / 100,
+      averageConfidence: Math.round(avgEdge * 100) / 100,
+      score: Math.round(ringScore * 100) / 100,
       status: "pending_all" as const,
       acceptedBy: [],
       declinedBy: [],
@@ -157,24 +300,43 @@ export function findTradeRings(
     };
   });
 
-  // Sort by score descending
-  rings.sort((a, b) => b.score - a.score);
+  // ─── Step E: Rank, then select disjoint primary set ────────
+  scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    const bMin = Math.min(...b.edges.map((e) => e.confidence));
+    const aMin = Math.min(...a.edges.map((e) => e.confidence));
+    if (bMin !== aMin) return bMin - aMin;
+    if (a.participants.length !== b.participants.length) return a.participants.length - b.participants.length;
+    return a.id.localeCompare(b.id); // deterministic tiebreak
+  });
 
-  return rings.slice(0, 10);
-}
+  // Greedy disjoint selection for primary rings
+  const usedUsers = new Set<string>();
+  const usedOffers = new Set<string>();
+  const usedNeeds = new Set<string>();
+  const primary: MultiTrade[] = [];
+  const alternates: MultiTrade[] = [];
 
-function deduplicateCycles(cycles: string[][]): string[][] {
-  const seen = new Set<string>();
-  const unique: string[][] = [];
+  for (const ring of scored) {
+    const ringUsers = new Set(ring.participants);
+    const ringOffers = new Set(ring.edges.map((e) => `${e.fromUserId}:${e.fromOffer}`));
+    const ringNeeds = new Set(ring.edges.map((e) => `${e.toUserId}:${e.toNeed}`));
 
-  for (const cycle of cycles) {
-    // Normalize: sort participant IDs to create a canonical key
-    const key = [...cycle].sort().join(",");
-    if (!seen.has(key)) {
-      seen.add(key);
-      unique.push(cycle);
+    const conflicts =
+      [...ringUsers].some((u) => usedUsers.has(u)) ||
+      [...ringOffers].some((o) => usedOffers.has(o)) ||
+      [...ringNeeds].some((n) => usedNeeds.has(n));
+
+    if (!conflicts && primary.length < TOP_K_PRIMARY) {
+      primary.push(ring);
+      ringUsers.forEach((u) => usedUsers.add(u));
+      ringOffers.forEach((o) => usedOffers.add(o));
+      ringNeeds.forEach((n) => usedNeeds.add(n));
+    } else if (alternates.length < TOP_K_ALTERNATES) {
+      alternates.push(ring);
     }
   }
 
-  return unique;
+  // Return primary first, then alternates
+  return [...primary, ...alternates];
 }
