@@ -1,7 +1,66 @@
 import { NextRequest, NextResponse } from "next/server";
 import { store } from "@/lib/store";
-import { parsePost } from "@/lib/gemini";
-import { NeedPost } from "@/lib/types";
+import { NeedPost, ParseResponse, ParsedSkill } from "@/lib/types";
+
+const CATEGORIES = [
+  "finance", "education", "home services", "pet care", "technology",
+  "creative services", "food services", "fitness", "maintenance",
+  "language services", "elder care", "errands", "consulting", "goods", "other",
+];
+
+function localParseNeed(rawNeed: string): ParseResponse {
+  const text = rawNeed.toLowerCase();
+  const needs: ParsedSkill[] = [];
+
+  // Simple keyword-to-category mapping
+  const keywordMap: Record<string, string> = {
+    tax: "finance", bookkeep: "finance", account: "finance", budget: "finance",
+    tutor: "education", teach: "education", lesson: "education", learn: "education",
+    clean: "home services", paint: "home services", repair: "home services", fix: "home services",
+    assembl: "home services", plumb: "home services", furnitur: "home services",
+    dog: "pet care", cat: "pet care", pet: "pet care", walk: "pet care",
+    website: "technology", app: "technology", code: "technology", software: "technology",
+    design: "creative services", logo: "creative services", photo: "creative services",
+    headshot: "creative services", graphic: "creative services",
+    cook: "food services", meal: "food services", food: "food services", bake: "food services",
+    yoga: "fitness", fitness: "fitness", gym: "fitness", exercise: "fitness",
+    bike: "maintenance", bicycle: "maintenance",
+    translat: "language services", hungarian: "language services", english: "language services",
+    elder: "elder care", senior: "elder care", grocery: "elder care",
+    errand: "errands",
+  };
+
+  let category = "other";
+  for (const [keyword, cat] of Object.entries(keywordMap)) {
+    if (text.includes(keyword)) {
+      category = cat;
+      break;
+    }
+  }
+
+  // Extract a concise skill name from the raw text
+  const skill = rawNeed.length > 60 ? rawNeed.substring(0, 60).trim() + "..." : rawNeed.trim();
+  needs.push({ skill, category });
+
+  return { offers: [], needs, confidence: 0.7 };
+}
+
+async function parseNeedSmart(rawNeed: string): Promise<ParseResponse> {
+  // Try Gemini first, fall back to local
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      const { parsePost } = await import("@/lib/gemini");
+      const result = await parsePost(rawNeed, "");
+      // Only use Gemini result if it's actually confident
+      if (result.confidence >= 0.5 && result.needs.length > 0) {
+        return result;
+      }
+    } catch {
+      // Gemini failed, use local parser
+    }
+  }
+  return localParseNeed(rawNeed);
+}
 
 // GET — return profiles, needs, and the flattened "posts" view
 export async function GET() {
@@ -32,8 +91,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse the need using Gemini AI
-    const parsed = await parsePost(rawNeed, "");
+    const parsed = await parseNeedSmart(rawNeed);
 
     const newNeed: NeedPost = {
       id: `need-${Date.now()}`,
