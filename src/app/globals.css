@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #FAF9F7;
+  --bg-secondary: #F1EDE8;
+  --fg: #1A1A1A;
+  --fg-secondary: #5C5C5C;
+  --card: #FFFFFF;
+  --card-border: #E8E4DF;
+  --card-hover: #F7F5F2;
+  --primary: #D97757;
+  --primary-hover: #C4623F;
+  --primary-light: #FBEEE8;
+  --accent: #6B8F71;
+  --accent-light: #EBF3EC;
+  --warm: #C49A6C;
+  --warm-light: #FDF5ED;
+  --muted: #8C8C8C;
+  --danger: #C75050;
+  --danger-light: #FDEAEA;
+  --success: #5B9A6B;
+  --success-light: #E8F5EB;
+  --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Warm card hover */
+.card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  transition: all 0.2s ease;
+}
+.card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: #d4cfc9;
+}
+
+/* Trade ring glow — warm terracotta */
+.ring-glow {
+  box-shadow: 0 2px 8px rgba(217, 119, 87, 0.08), 0 8px 24px rgba(217, 119, 87, 0.04);
+}
+.ring-glow:hover {
+  box-shadow: 0 4px 16px rgba(217, 119, 87, 0.12), 0 12px 32px rgba(217, 119, 87, 0.06);
+}
+
+/* Agent step slide-in */
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.agent-step {
+  animation: slide-in 0.3s ease-out forwards;
+}
+
+/* Animated ring SVG connections */
+.ring-line {
+  stroke-dasharray: 8 4;
+  animation: dash 1.5s linear infinite;
+}
+@keyframes dash {
+  to { stroke-dashoffset: -12; }
+}
+
+/* Heartbeat pulse */
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+.heartbeat-pulse {
+  animation: heartbeat 2s ease-in-out infinite;
+}
+
+/* Pill badges */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* Warm button styles */
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-primary:hover {
+  background: var(--primary-hover);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--fg);
+  font-weight: 500;
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-secondary:hover {
+  background: var(--bg-secondary);
+  border-color: #ccc;
+}
