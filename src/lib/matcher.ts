@@ -2,7 +2,7 @@ import { UserPost, GraphEdge, MultiTrade } from "./types";
 import { batchScoreCompatibility } from "./gemini";
 
 // ─── Config ────────────────────────────────────────────────────────
-const MIN_EDGE_CONFIDENCE = 0.50;
+const MIN_EDGE_CONFIDENCE = 0.45;
 const MAX_CYCLE_LENGTH = 4;
 const MIN_CYCLE_LENGTH = 2;
 const TOP_EDGES_PER_PAIR = 3;
@@ -204,16 +204,16 @@ export async function buildCompatibilityGraph(
       geminiResults.push(...results);
     }
 
-    // Blend local + Gemini scores — Gemini has veto power on bad matches
+    // Blend local + Gemini scores — Gemini can veto clearly wrong matches
     for (let i = 0; i < retained.length; i++) {
       const gemini = geminiResults[i];
       if (gemini) {
-        if (gemini.score <= 0.15) {
-          // Gemini says this is NOT a match — kill it regardless of heuristic
+        if (gemini.score <= 0.10) {
+          // Gemini says this is clearly NOT a match — kill it
           retained[i].confidence = 0;
           retained[i].reasoning = gemini.reasoning || "Not a match";
         } else {
-          retained[i].confidence = Math.round((0.3 * retained[i].confidence + 0.7 * gemini.score) * 100) / 100;
+          retained[i].confidence = Math.round((0.4 * retained[i].confidence + 0.6 * gemini.score) * 100) / 100;
           retained[i].reasoning = gemini.reasoning;
         }
       }

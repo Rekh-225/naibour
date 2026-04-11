@@ -75,7 +75,7 @@ export async function scoreCompatibility(
 ): Promise<CompatibilityScore> {
   const model = getModel();
 
-  const prompt = `You are a strict matching agent for a barter/exchange platform. Your job is to determine whether an OFFER can actually fulfill a NEED.
+  const prompt = `You are a matching agent for a barter/exchange platform. Determine whether an OFFER can fulfill a NEED.
 
 OFFER: "${offer}" (category: ${offerCategory})
 NEED: "${need}" (category: ${needCategory})
@@ -88,16 +88,14 @@ Respond with ONLY valid JSON (no markdown, no code fences):
   "needSkill": "${need}"
 }
 
-CRITICAL SCORING RULES:
-- The question is: "Can the person offering this ACTUALLY deliver what the person needs?" If no, score 0.
-- 0.0 = different skills, different domains, or superficially similar words but fundamentally different services (e.g. "guitar lessons" does NOT match "golf lessons" — these are completely different skills)
-- 0.1 = shares a keyword but is a different service entirely
-- 0.3 = same broad domain but different specialization (e.g. "calculus tutoring" vs "physics tutoring")
-- 0.6 = closely related and could reasonably substitute (e.g. "apartment cleaning" vs "house cleaning")
-- 0.8 = strong match, clearly the same service with minor wording differences
-- 1.0 = exact same service
-- DO NOT be fooled by shared words like "lessons", "tutoring", "repair", "help". "Guitar lessons" and "golf lessons" are COMPLETELY DIFFERENT (score 0). "Math tutoring" and "science tutoring" are DIFFERENT (score 0.2). The SUBJECT MATTER must match, not just the format.
-- When in doubt, score LOW. A false positive wastes people's time.`;
+Scoring guide:
+- 1.0 = exact same service (e.g. "dog walking" matches "dog walking")
+- 0.8 = same service, minor wording difference (e.g. "apartment cleaning" matches "deep cleaning")
+- 0.6 = closely related, could reasonably substitute (e.g. "math tutoring" matches "calculus tutoring")
+- 0.3 = same broad domain but different specialization (e.g. "plumbing" vs "electrical work")
+- 0.0 = unrelated, even if they share a word (e.g. "guitar lessons" vs "golf lessons" — different subjects, score 0)
+
+Key rule: The SUBJECT MATTER must match. Shared format words like "lessons", "repair", "tutoring" do not make a match — the actual skill must be the same or very similar.`;
 
   try {
     const result = await model.generateContent(prompt);
@@ -148,7 +146,7 @@ export async function batchScoreCompatibility(
     )
     .join("\n");
 
-  const prompt = `You are a strict matching agent for a barter/exchange platform. For each pair, determine whether the OFFER can ACTUALLY fulfill the NEED.
+  const prompt = `You are a matching agent for a barter/exchange platform. For each pair, determine whether the OFFER can fulfill the NEED.
 
 Pairs to evaluate:
 ${pairsDescription}
@@ -159,16 +157,14 @@ Respond with ONLY a valid JSON array (no markdown, no code fences):
   ...
 ]
 
-CRITICAL SCORING RULES:
-- The question is: "Can the person offering this ACTUALLY deliver what the person needs?" If no, score 0.
-- 0.0 = different skills or superficially similar words but fundamentally different services
-- 0.1 = shares a keyword but is a different service entirely (e.g. "guitar lessons" vs "golf lessons" = 0.0, these are COMPLETELY different)
-- 0.3 = same broad domain but different specialization
-- 0.6 = closely related, could reasonably substitute
-- 0.8 = strong match, clearly the same service
-- 1.0 = exact same service
-- DO NOT be fooled by shared words like "lessons", "tutoring", "repair", "help", "coaching". The SUBJECT MATTER must match. "Guitar lessons" and "golf lessons" share the word "lessons" but are completely unrelated skills (score 0).
-- When in doubt, score LOW. A false positive wastes people's time.`;
+Scoring guide:
+- 1.0 = exact same service (e.g. "dog walking" matches "dog walking")
+- 0.8 = same service, minor wording difference (e.g. "apartment cleaning" matches "deep cleaning")
+- 0.6 = closely related, could reasonably substitute (e.g. "math tutoring" matches "calculus tutoring")
+- 0.3 = same broad domain but different specialization (e.g. "plumbing" vs "electrical work")
+- 0.0 = unrelated, even if they share a word (e.g. "guitar lessons" vs "golf lessons" — different subjects, score 0)
+
+Key rule: The SUBJECT MATTER must match. Shared format words like "lessons", "repair", "tutoring" do not make a match — the actual skill must be the same or very similar.`;
 
   try {
     const result = await model.generateContent(prompt);

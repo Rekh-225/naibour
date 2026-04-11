@@ -53,36 +53,6 @@ export default function AboutPage() {
   return (
     <div>
       {/* ═══════════════════════════════════════════════════════════
-          1. HERO
-          ═══════════════════════════════════════════════════════════ */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-[var(--primary-light)] to-transparent pointer-events-none" />
-        <div className="mx-auto max-w-3xl px-5 pt-24 pb-20 text-center relative">
-          <div className="pill bg-[var(--primary-light)] text-[var(--primary)] mb-6 mx-auto w-fit">
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] heartbeat-pulse inline-block" />
-            AI-powered value exchange
-          </div>
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-6 text-[var(--fg)]">
-            Turn what you have
-            <br />
-            <span className="text-[var(--primary)]">into what you need</span>
-          </h1>
-          <p className="text-lg text-[var(--fg-secondary)] max-w-2xl mx-auto mb-10 leading-relaxed">
-            Post what you have. Post what you need. An AI agent finds multi-party trades
-            you would never discover on your own.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a href="/marketplace" className="btn-primary text-base px-8 py-3">
-              Enter the marketplace
-            </a>
-            <a href="#how-it-works" className="btn-secondary text-base">
-              See how it works
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════
           2. THE PROBLEM
           ═══════════════════════════════════════════════════════════ */}
       <section className="mx-auto max-w-5xl px-5 py-20">
@@ -150,125 +120,6 @@ export default function AboutPage() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════
-          4. SYSTEM ARCHITECTURE
-          ═══════════════════════════════════════════════════════════ */}
-      <section className="mx-auto max-w-5xl px-5 py-20">
-        <div className="text-center mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-3">System architecture</h2>
-          <p className="text-[var(--fg-secondary)] max-w-xl mx-auto">
-            Four layers, a trust engine, and a privacy gate.
-          </p>
-        </div>
-
-        <div className="card p-6 sm:p-8 overflow-x-auto">
-          <svg viewBox="0 0 820 440" className="w-full" style={{ minWidth: "600px" }}>
-            <defs>
-              <marker id="arrow" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
-                <polygon points="0 0, 10 3.5, 0 7" fill="var(--muted)" />
-              </marker>
-              <marker id="arrow-p" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
-                <polygon points="0 0, 10 3.5, 0 7" fill="var(--primary)" />
-              </marker>
-            </defs>
-
-            {/* Layer backgrounds */}
-            <rect x="55" y="4" width="530" height="82" rx="12" fill="var(--primary-light)" opacity="0.5" />
-            <rect x="55" y="98" width="530" height="82" rx="12" fill="var(--accent-light)" opacity="0.5" />
-            <rect x="55" y="192" width="530" height="82" rx="12" fill="var(--warm-light)" opacity="0.5" />
-            <rect x="55" y="286" width="530" height="82" rx="12" fill="var(--success-light)" opacity="0.5" />
-
-            {/* Layer labels */}
-            <text x="68" y="20" fill="var(--primary)" fontSize="9" fontWeight="700" letterSpacing="1">INPUT</text>
-            <text x="68" y="114" fill="var(--accent)" fontSize="9" fontWeight="700" letterSpacing="1">AI LAYER</text>
-            <text x="68" y="208" fill="var(--warm)" fontSize="9" fontWeight="700" letterSpacing="1">GRAPH</text>
-            <text x="68" y="302" fill="var(--success)" fontSize="9" fontWeight="700" letterSpacing="1">OUTPUT</text>
-
-            {/* ── INPUT NODES ── */}
-            <rect x="100" y="30" width="140" height="40" rx="10" fill="white" stroke="var(--primary)" strokeWidth="1.5" />
-            <text x="170" y="55" textAnchor="middle" fill="var(--fg)" fontSize="11" fontWeight="600">User Posts</text>
-
-            <rect x="290" y="30" width="140" height="40" rx="10" fill="white" stroke="var(--primary)" strokeWidth="1.5" />
-            <text x="360" y="55" textAnchor="middle" fill="var(--fg)" fontSize="11" fontWeight="600">External Data</text>
-
-            {/* ── AI NODES ── */}
-            <rect x="75" y="122" width="130" height="40" rx="10" fill="white" stroke="var(--accent)" strokeWidth="1.5" />
-            <text x="140" y="147" textAnchor="middle" fill="var(--fg)" fontSize="11" fontWeight="600">NLP Parser</text>
-
-            <rect x="245" y="122" width="145" height="40" rx="10" fill="white" stroke="var(--accent)" strokeWidth="1.5" />
-            <text x="317" y="147" textAnchor="middle" fill="var(--fg)" fontSize="11" fontWeight="600">Schema Validator</text>
-
-            <rect x="430" y="122" width="140" height="40" rx="10" fill="white" stroke="var(--accent)" strokeWidth="1.5" />
-            <text x="500" y="147" textAnchor="middle" fill="var(--fg)" fontSize="11" fontWeight="600">Scoring Engine</text>
-
-            {/* ── GRAPH NODES ── */}
-            <rect x="130" y="216" width="155" height="40" rx="10" fill="white" stroke="var(--warm)" strokeWidth="1.5" />
-            <text x="207" y="241" textAnchor="middle" fill="var(--fg)" fontSize="11" fontWeight="600">Directed Graph</text>
-
-            <rect x="345" y="216" width="155" height="40" rx="10" fill="white" stroke="var(--warm)" strokeWidth="1.5" />
-            <text x="422" y="241" textAnchor="middle" fill="var(--fg)" fontSize="11" fontWeight="600">Cycle Detection</text>
-
-            {/* ── OUTPUT NODES ── */}
-            <rect x="75" y="310" width="130" height="40" rx="10" fill="white" stroke="var(--success)" strokeWidth="1.5" />
-            <text x="140" y="335" textAnchor="middle" fill="var(--fg)" fontSize="11" fontWeight="600">Ring Ranker</text>
-
-            <rect x="245" y="310" width="145" height="40" rx="10" fill="white" stroke="var(--success)" strokeWidth="1.5" />
-            <text x="317" y="335" textAnchor="middle" fill="var(--fg)" fontSize="11" fontWeight="600">Proposal Engine</text>
-
-            <rect x="430" y="310" width="140" height="40" rx="10" fill="white" stroke="var(--success)" strokeWidth="1.5" />
-            <text x="500" y="335" textAnchor="middle" fill="var(--fg)" fontSize="11" fontWeight="600">Consensus</text>
-
-            {/* ── SIDEBAR: Trust + Privacy ── */}
-            <rect x="620" y="108" width="180" height="168" rx="14" fill="white" stroke="var(--card-border)" strokeWidth="1.5" strokeDasharray="6 3" />
-            <text x="710" y="130" textAnchor="middle" fill="var(--muted)" fontSize="9" fontWeight="700" letterSpacing="1">CROSS-CUTTING</text>
-
-            <rect x="640" y="142" width="140" height="36" rx="8" fill="var(--primary-light)" stroke="var(--primary)" strokeWidth="1.5" />
-            <text x="710" y="165" textAnchor="middle" fill="var(--primary)" fontSize="10" fontWeight="600">Trust Engine</text>
-
-            <rect x="640" y="192" width="140" height="36" rx="8" fill="var(--accent-light)" stroke="var(--accent)" strokeWidth="1.5" />
-            <text x="710" y="215" textAnchor="middle" fill="var(--accent)" fontSize="10" fontWeight="600">Privacy Gate</text>
-
-            <rect x="640" y="228" width="140" height="36" rx="8" fill="var(--warm-light)" stroke="var(--warm)" strokeWidth="1.5" />
-            <text x="710" y="251" textAnchor="middle" fill="var(--warm)" fontSize="10" fontWeight="600">Feedback Loop</text>
-
-            {/* ── PRIMARY FLOW ARROWS ── */}
-            {/* Input → AI */}
-            <line x1="170" y1="70" x2="140" y2="122" stroke="var(--muted)" strokeWidth="1.5" markerEnd="url(#arrow)" />
-            <line x1="360" y1="70" x2="317" y2="122" stroke="var(--muted)" strokeWidth="1.5" markerEnd="url(#arrow)" />
-            {/* AI horizontal */}
-            <line x1="205" y1="142" x2="245" y2="142" stroke="var(--muted)" strokeWidth="1.5" markerEnd="url(#arrow)" />
-            <line x1="390" y1="142" x2="430" y2="142" stroke="var(--muted)" strokeWidth="1.5" markerEnd="url(#arrow)" />
-            {/* AI → Graph */}
-            <line x1="317" y1="162" x2="250" y2="216" stroke="var(--muted)" strokeWidth="1.5" markerEnd="url(#arrow)" />
-            {/* Graph horizontal */}
-            <line x1="285" y1="236" x2="345" y2="236" stroke="var(--muted)" strokeWidth="1.5" markerEnd="url(#arrow)" />
-            {/* Graph → Output */}
-            <line x1="345" y1="256" x2="180" y2="310" stroke="var(--muted)" strokeWidth="1.5" markerEnd="url(#arrow)" />
-            {/* Output horizontal */}
-            <line x1="205" y1="330" x2="245" y2="330" stroke="var(--muted)" strokeWidth="1.5" markerEnd="url(#arrow)" />
-            <line x1="390" y1="330" x2="430" y2="330" stroke="var(--muted)" strokeWidth="1.5" markerEnd="url(#arrow)" />
-
-            {/* ── SIDEBAR CONNECTORS ── */}
-            <line x1="640" y1="160" x2="570" y2="145" stroke="var(--primary)" strokeWidth="1" strokeDasharray="4 3" markerEnd="url(#arrow-p)" opacity="0.6" />
-            <line x1="640" y1="246" x2="570" y2="330" stroke="var(--warm)" strokeWidth="1" strokeDasharray="4 3" opacity="0.5" />
-
-            {/* ── FEEDBACK ARC ── */}
-            <path d="M 570 330 Q 600 250 570 160" fill="none" stroke="var(--primary)" strokeWidth="1.2" strokeDasharray="4 3" markerEnd="url(#arrow-p)" opacity="0.5" />
-
-            {/* ── LEGEND ── */}
-            <text x="70" y="395" fill="var(--muted)" fontSize="8">Solid = primary data flow</text>
-            <text x="70" y="410" fill="var(--muted)" fontSize="8">Dashed = cross-cutting concerns &amp; feedback</text>
-
-            {/* Live badge */}
-            <rect x="630" y="385" width="170" height="36" rx="10" fill="var(--primary-light)" />
-            <circle cx="648" cy="403" r="4" fill="var(--primary)">
-              <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite" />
-            </circle>
-            <text x="660" y="407" fill="var(--primary)" fontSize="10" fontWeight="600">Heartbeat: daily 06:00 CET</text>
-          </svg>
         </div>
       </section>
 
@@ -376,42 +227,6 @@ export default function AboutPage() {
           <h2 className="text-2xl sm:text-3xl font-bold mb-3">Trust engine</h2>
           <p className="text-[var(--fg-secondary)] max-w-2xl mx-auto">
             A weighted confidence score, not a checklist. Three pillars, 7.5 max.
-          </p>
-        </div>
-
-        {/* Score breakdown example */}
-        <div className="card p-6 mb-8 max-w-2xl mx-auto">
-          <h3 className="font-semibold text-lg mb-4">Example trust score</h3>
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-16 h-16 rounded-2xl bg-[var(--warm-light)] flex items-center justify-center">
-              <span className="text-2xl font-bold text-[var(--warm)]">5.0</span>
-            </div>
-            <div className="flex-1 space-y-1.5">
-              <div className="flex items-center gap-2 text-sm">
-                <div className="flex-1 h-2 rounded-full bg-[var(--bg-secondary)] overflow-hidden">
-                  <div className="h-full rounded-full bg-[var(--accent)]" style={{ width: "100%" }} />
-                </div>
-                <span className="text-xs text-[var(--fg-secondary)] w-24">KYC verified</span>
-                <span className="text-xs font-semibold w-8 text-right">+2.0</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <div className="flex-1 h-2 rounded-full bg-[var(--bg-secondary)] overflow-hidden">
-                  <div className="h-full rounded-full bg-[var(--primary)]" style={{ width: "67%" }} />
-                </div>
-                <span className="text-xs text-[var(--fg-secondary)] w-24">Social linked</span>
-                <span className="text-xs font-semibold w-8 text-right">+1.0</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <div className="flex-1 h-2 rounded-full bg-[var(--bg-secondary)] overflow-hidden">
-                  <div className="h-full rounded-full bg-[var(--warm)]" style={{ width: "50%" }} />
-                </div>
-                <span className="text-xs text-[var(--fg-secondary)] w-24">Card auth hold</span>
-                <span className="text-xs font-semibold w-8 text-right">+2.0</span>
-              </div>
-            </div>
-          </div>
-          <p className="text-xs text-[var(--muted)]">
-            Max score is 7.5. Higher scores unlock better matches and priority in the AI&apos;s trade ring algorithm.
           </p>
         </div>
 
@@ -540,47 +355,6 @@ export default function AboutPage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════
-          10. PAYMENTS AND COMPLIANCE
-          ═══════════════════════════════════════════════════════════ */}
-      <section className="mx-auto max-w-3xl px-5 py-20">
-        <div className="text-center mb-10">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-3">Payments and compliance</h2>
-          <p className="text-[var(--fg-secondary)] max-w-xl mx-auto">
-            Practical now, scalable later. No compliance shortcuts.
-          </p>
-        </div>
-        <div className="space-y-4">
-          <div className="card p-6">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-xl bg-[var(--primary-light)] flex items-center justify-center text-base">💳</div>
-              <h3 className="font-semibold">Stripe authorization hold (MVP)</h3>
-            </div>
-            <p className="text-sm text-[var(--fg-secondary)] leading-relaxed">
-              Reserves funds on the user&apos;s card without Naibour taking custody. Real accountability, minimal compliance burden.
-            </p>
-          </div>
-          <div className="card p-6">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-xl bg-[var(--warm-light)] flex items-center justify-center text-base">⏱️</div>
-              <h3 className="font-semibold">7-day authorization window</h3>
-            </div>
-            <p className="text-sm text-[var(--fg-secondary)] leading-relaxed">
-              Standard hold lasts ~7 days. Users re-authorize if a trade is still pending. Known limitation, clearly communicated.
-            </p>
-          </div>
-          <div className="card p-6">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-xl bg-[var(--accent-light)] flex items-center justify-center text-base">🏛️</div>
-              <h3 className="font-semibold">Regulated partner path</h3>
-            </div>
-            <p className="text-sm text-[var(--fg-secondary)] leading-relaxed">
-              At scale, Naibour can partner with regulated escrow providers or pursue its own licensing.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════
           11. WHY THIS IS FINTECH
           ═══════════════════════════════════════════════════════════ */}
       <section className="bg-[var(--bg-secondary)]">
@@ -621,39 +395,6 @@ export default function AboutPage() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════
-          12. TECHNICAL DEPTH
-          ═══════════════════════════════════════════════════════════ */}
-      <section className="mx-auto max-w-5xl px-5 py-20">
-        <div className="text-center mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-3">Under the hood</h2>
-          <p className="text-[var(--fg-secondary)] max-w-xl mx-auto">
-            Not a prompt wrapper. Real system, real code, running now.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[
-            { label: "NLP extraction", desc: "Free-text input is parsed into structured skill objects with categories, availability, and confidence via Gemini 2.0 Flash." },
-            { label: "Schema validation", desc: "All parsed output is validated against a strict TypeScript schema. Malformed responses trigger a retry with stricter prompting." },
-            { label: "Compatibility scoring", desc: "Multi-signal scoring: 30% taxonomy match, 35% semantic similarity, 10% trust, 5% freshness, 20% combined boost. Then refined by AI." },
-            { label: "Directed weighted graph", desc: "Every viable offer-to-need connection becomes a weighted edge. Top 3 edges per user pair are retained and sent to AI for refinement." },
-            { label: "DFS cycle detection", desc: "Depth-first search enumerates all cycles of length 2 to 4. Cycles are deduplicated by full edge signature, not just user IDs." },
-            { label: "Ring ranking", desc: "Rings are scored: 35% minimum edge (bottleneck), 25% average edge, 15% completion probability, 10% trust, 5% freshness, 5% fairness." },
-            { label: "Greedy disjoint selection", desc: "Top-ranked rings are selected greedily so no user, offer, or need appears in multiple primary rings. Alternates are kept as backups." },
-            { label: "Trust weighting", desc: "Trust scores from KYC, social signals, and auth holds are normalized and fed into both edge scoring and ring ranking." },
-            { label: "Feedback loop", desc: "Accept/decline decisions feed back into the system. Declined rings trigger re-search. Acceptance patterns improve future scoring." },
-            { label: "External normalization", desc: "External listings can be ingested, parsed through the same NLP pipeline, and incorporated into the graph as additional supply/demand nodes." },
-            { label: "Privacy gating", desc: "Identity details are withheld until consensus. The graph operates on pseudonymous IDs. Progressive reveal happens at trade execution." },
-            { label: "Synonym resolution", desc: "A curated synonym map normalizes skill descriptions before scoring. 'Dog walking', 'walk dog', and 'pet walking' all resolve to the same skill group." },
-          ].map((item) => (
-            <div key={item.label} className="rounded-xl bg-[var(--bg-secondary)] p-4">
-              <h4 className="font-semibold text-sm mb-1">{item.label}</h4>
-              <p className="text-xs text-[var(--fg-secondary)] leading-relaxed">{item.desc}</p>
-            </div>
-          ))}
         </div>
       </section>
 
