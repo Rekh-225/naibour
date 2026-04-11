@@ -1,7 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ParseResponse, CompatibilityScore } from "./types";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const GEMINI_API_KEY = "AIzaSyDr_O1CBAliI-gj4dNAiAT4ekITDeRCb38";
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 function getModel() {
   return genAI.getGenerativeModel({ model: "gemini-2.0-flash" });

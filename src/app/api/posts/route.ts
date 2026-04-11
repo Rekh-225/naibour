@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { store } from "@/lib/store";
+import { runMatchingAgent } from "@/lib/agent";
 import { NeedPost, ParseResponse, ParsedSkill } from "@/lib/types";
 
 const CATEGORIES = [
@@ -46,18 +47,15 @@ function localParseNeed(rawNeed: string): ParseResponse {
 }
 
 async function parseNeedSmart(rawNeed: string): Promise<ParseResponse> {
-  // Try Gemini first, fall back to local
-  if (process.env.GEMINI_API_KEY) {
-    try {
-      const { parsePost } = await import("@/lib/gemini");
-      const result = await parsePost(rawNeed, "");
-      // Only use Gemini result if it's actually confident
-      if (result.confidence >= 0.5 && result.needs.length > 0) {
-        return result;
-      }
-    } catch {
-      // Gemini failed, use local parser
+  // Gemini is mandatory for agentic AI matching
+  try {
+    const { parsePost } = await import("@/lib/gemini");
+    const result = await parsePost(rawNeed, "");
+    if (result.confidence >= 0.5 && result.needs.length > 0) {
+      return result;
     }
+  } catch (err) {
+    console.error("Gemini parse error (falling back to local):", err);
   }
   return localParseNeed(rawNeed);
 }
@@ -105,11 +103,16 @@ export async function POST(request: NextRequest) {
 
     store.addNeed(newNeed);
 
+    // Trigger matching agent automatically after new post (fire-and-forget)
+    runMatchingAgent().catch((err) =>
+      console.error("Auto-matching after post failed:", err)
+    );
+
     return NextResponse.json({
       need: newNeed,
       profile,
       parseConfidence: parsed.confidence,
-      message: `Need posted for ${profile.userName}`,
+      message: `Need posted for ${profile.userName}. Matching agent triggered.`,
     });
   } catch (error) {
     console.error("Need creation error:", error);

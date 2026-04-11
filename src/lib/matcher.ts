@@ -1,4 +1,5 @@
 import { UserPost, GraphEdge, MultiTrade } from "./types";
+import { batchScoreCompatibility } from "./gemini";
 
 // ─── Config ────────────────────────────────────────────────────────
 const MIN_EDGE_CONFIDENCE = 0.40;
@@ -47,7 +48,7 @@ function getSynonymGroup(skill: string): string | null {
   return null;
 }
 
-// ─── Step B: Local edge scoring (no Gemini required) ──────────────
+// ─── Step B: Local edge pre-scoring (Gemini enhances in graph build) ──
 
 function scoreEdge(
   offer: { skill: string; category: string },
@@ -115,7 +116,7 @@ function generateReasoning(
   }
 }
 
-// ─── Step B: Build edge graph (fully local) ───────────────────────
+// ─── Step B: Build edge graph (local pre-filter + Gemini AI scoring) ──
 
 export async function buildCompatibilityGraph(
   posts: UserPost[]
@@ -172,6 +173,47 @@ export async function buildCompatibilityGraph(
         kept++;
       }
     }
+  }
+
+  // ─── Gemini AI scoring (mandatory for agentic matching) ─────────
+  if (retained.length > 0) {
+    const BATCH_SIZE = 20;
+    const postMap = new Map(posts.map((p) => [p.id, p]));
+
+    const pairs = retained.map((edge) => {
+      const fromPost = postMap.get(edge.fromUserId);
+      const toPost = postMap.get(edge.toUserId);
+      const offerCat = fromPost?.parsedOffers.find((o) => o.skill === edge.fromOffer)?.category || "other";
+      const needCat = toPost?.parsedNeeds.find((n) => n.skill === edge.toNeed)?.category || "other";
+      return {
+        fromUserId: edge.fromUserId,
+        toUserId: edge.toUserId,
+        offer: edge.fromOffer,
+        offerCategory: offerCat,
+        need: edge.toNeed,
+        needCategory: needCat,
+      };
+    });
+
+    // Batch Gemini calls
+    const geminiResults: Array<{ score: number; reasoning: string }> = [];
+    for (let i = 0; i < pairs.length; i += BATCH_SIZE) {
+      const batch = pairs.slice(i, i + BATCH_SIZE);
+      const results = await batchScoreCompatibility(batch);
+      geminiResults.push(...results);
+    }
+
+    // Blend local + Gemini scores (40% local, 60% Gemini)
+    for (let i = 0; i < retained.length; i++) {
+      const gemini = geminiResults[i];
+      if (gemini && gemini.score > 0) {
+        retained[i].confidence = Math.round((0.4 * retained[i].confidence + 0.6 * gemini.score) * 100) / 100;
+        retained[i].reasoning = gemini.reasoning;
+      }
+    }
+
+    // Re-filter after blending
+    return retained.filter((e) => e.confidence >= MIN_EDGE_CONFIDENCE);
   }
 
   return retained;
