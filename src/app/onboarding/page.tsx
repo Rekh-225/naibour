@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth } from "@/lib/auth-context";
 
 interface OfferingInput {
   skill: string;
@@ -36,6 +37,7 @@ export default function OnboardingPage() {
     { skill: "", category: "other", description: "" },
   ]);
   const [openToNegotiation, setOpenToNegotiation] = useState(true);
+  const { signIn } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
@@ -82,6 +84,7 @@ export default function OnboardingPage() {
       if (res.ok) {
         const data = await res.json();
         setProfileId(data.profile.id);
+        await signIn(data.profile.id);
         setDone(true);
       }
     } catch {

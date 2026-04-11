@@ -1,33 +1,48 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { UserProfile } from "@/lib/types";
+import { useState } from "react";
+import { useAuth } from "@/lib/auth-context";
 
 export default function PostNeedPage() {
-  const [profiles, setProfiles] = useState<UserProfile[]>([]);
-  const [selectedProfile, setSelectedProfile] = useState<string>("");
+  const { profile, loading: authLoading } = useAuth();
   const [rawNeed, setRawNeed] = useState("");
   const [urgency, setUrgency] = useState<"low" | "medium" | "high">("medium");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  useEffect(() => {
-    fetch("/api/profiles")
-      .then((r) => r.json())
-      .then((data) => {
-        setProfiles(data.profiles || []);
-        // Check URL for pre-selected profile
-        const params = new URLSearchParams(window.location.search);
-        const prof = params.get("profile");
-        if (prof) setSelectedProfile(prof);
-      });
-  }, []);
+  // Not signed in — show gate
+  if (!authLoading && !profile) {
+    return (
+      <div className="mx-auto max-w-md px-5 py-24 text-center">
+        <div className="text-5xl mb-4">🔒</div>
+        <h1 className="text-2xl font-bold mb-3">Sign in to post a need</h1>
+        <p className="text-[var(--fg-secondary)] mb-6">
+          You need a profile to post what you need. Your offerings are what neighbours see when deciding to trade with you.
+        </p>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <a href="/signin" className="btn-primary px-6 py-2.5">
+            Sign in
+          </a>
+          <a href="/onboarding" className="btn-secondary">
+            Create a profile
+          </a>
+        </div>
+      </div>
+    );
+  }
 
-  const profile = profiles.find((p) => p.id === selectedProfile);
+  // Still loading auth
+  if (authLoading) {
+    return (
+      <div className="mx-auto max-w-2xl px-5 py-24 text-center text-[var(--muted)]">
+        Loading...
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProfile || !rawNeed.trim()) return;
+    if (!profile || !rawNeed.trim()) return;
     setLoading(true);
     setResult(null);
 
@@ -35,7 +50,7 @@ export default function PostNeedPage() {
       const res = await fetch("/api/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profileId: selectedProfile, rawNeed: rawNeed.trim(), urgency }),
+        body: JSON.stringify({ profileId: profile.id, rawNeed: rawNeed.trim(), urgency }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -56,65 +71,41 @@ export default function PostNeedPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Post what you need</h1>
         <p className="text-[var(--fg-secondary)]">
-          Describe what you need in plain language. Your profile shows what you
-          can offer in return — neighbours will see both when matching.
+          Describe what you need in plain language. Your neighbours will see your
+          offerings when deciding to help.
         </p>
       </div>
 
-      {/* Profile selector */}
-      <div className="card p-5 mb-6">
-        <label className="block text-sm font-medium text-[var(--fg-secondary)] mb-2">
+      {/* Posting as — read-only profile card */}
+      <div className="card p-4 mb-6">
+        <div className="text-[10px] uppercase tracking-wider text-[var(--muted)] font-medium mb-2">
           Posting as
-        </label>
-        <select
-          value={selectedProfile}
-          onChange={(e) => setSelectedProfile(e.target.value)}
-          className="w-full rounded-xl bg-[var(--bg-secondary)] border border-[var(--card-border)] px-3 py-2.5 text-[var(--fg)] focus:outline-none focus:border-[var(--primary)] transition-colors"
-        >
-          <option value="">Select your profile...</option>
-          {profiles.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.userName} — {p.neighborhood} ({p.offerings.length} offerings)
-            </option>
+        </div>
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+            style={{ backgroundColor: profile!.avatarColor || "var(--primary)" }}
+          >
+            {profile!.userName.charAt(0)}
+          </div>
+          <div className="flex-1">
+            <div className="font-semibold text-sm">{profile!.userName}</div>
+            <div className="text-xs text-[var(--muted)]">
+              {profile!.neighborhood} · ★ {profile!.trustScore.toFixed(1)}
+              {profile!.verified && " ✓ Verified"}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          {profile!.offerings.map((o) => (
+            <span key={o.id} className="pill bg-[var(--accent-light)] text-[var(--accent)]">
+              {o.skill}
+            </span>
           ))}
-        </select>
-
-        {profile && (
-          <div className="mt-3 rounded-xl bg-[var(--bg-secondary)] p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold"
-                style={{ backgroundColor: profile.avatarColor || "var(--primary)" }}
-              >
-                {profile.userName.charAt(0)}
-              </div>
-              <div>
-                <div className="font-semibold text-sm">{profile.userName}</div>
-                <div className="text-xs text-[var(--muted)]">★ {profile.trustScore.toFixed(1)} {profile.verified && "✓ Verified"}</div>
-              </div>
-            </div>
-            <div className="text-xs text-[var(--fg-secondary)] mb-2">Your offerings:</div>
-            <div className="flex flex-wrap gap-1.5">
-              {profile.offerings.map((o) => (
-                <span key={o.id} className="pill bg-[var(--accent-light)] text-[var(--accent)]">
-                  {o.skill}
-                </span>
-              ))}
-              {profile.openToNegotiation && (
-                <span className="pill bg-[var(--warm-light)] text-[var(--warm)]">+ open to requests</span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {!selectedProfile && (
-          <div className="mt-3 text-sm text-[var(--muted)]">
-            Don&apos;t have a profile yet?{" "}
-            <a href="/onboarding" className="text-[var(--primary)] hover:underline font-medium">
-              Create one first →
-            </a>
-          </div>
-        )}
+          {profile!.openToNegotiation && (
+            <span className="pill bg-[var(--warm-light)] text-[var(--warm)]">+ open to requests</span>
+          )}
+        </div>
       </div>
 
       {/* Need form */}
@@ -159,7 +150,7 @@ export default function PostNeedPage() {
 
         <button
           type="submit"
-          disabled={loading || !selectedProfile || !rawNeed.trim()}
+          disabled={loading || !rawNeed.trim()}
           className="w-full btn-primary py-3"
         >
           {loading ? "AI is parsing your need..." : "Post need"}
