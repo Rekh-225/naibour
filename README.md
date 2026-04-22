@@ -113,25 +113,33 @@ naibour/
 │   │       ├── profiles/       # GET / POST user profiles
 │   │       └── trades/         # GET / POST / PATCH trades
 │   ├── components/
-│   │   ├── AgentSteps.tsx      # Visual log of AI agent reasoning steps
-│   │   ├── NavBar.tsx          # Top navigation bar
-│   │   ├── PostForm.tsx        # Form for submitting a new need post
-│   │   └── TradeRing.tsx       # Visual card for a proposed trade ring
+│   │   ├── AgentSteps.tsx         # Visual log of AI agent reasoning steps
+│   │   ├── HeartbeatAutoRunner.tsx # Background auto-trigger for heartbeat on page visibility
+│   │   ├── NavBar.tsx             # Top navigation bar (with unread notification count)
+│   │   ├── PostForm.tsx           # Form for submitting a new need post
+│   │   └── TradeRing.tsx          # Visual card for a proposed trade ring
 │   └── lib/
-│       ├── agent.ts            # Core AI agent orchestrator
-│       ├── auth-context.tsx    # Lightweight auth context (session profile ID)
-│       ├── cron.ts             # Heartbeat / cron utilities
-│       ├── gemini.ts           # Google Gemini API wrappers (parse, score, batch)
+│       ├── agent.ts            # Core AI agent orchestrator & heartbeat logic
+│       ├── auth-context.tsx    # Auth provider (session profile ID via HTTP-only cookie)
+│       ├── cron.ts             # Heartbeat scheduler (daily at 06:00 CET)
+│       ├── db-health.ts        # Database health check utility
+│       ├── gemini.ts           # Google Gemini API wrappers (parse, score, batch) with timeout handling
 │       ├── matcher.ts          # Graph-building & trade-ring discovery algorithm
+│       ├── prisma.ts           # Prisma client singleton (optional PostgreSQL support)
 │       ├── seed-data.ts        # Pre-seeded community profiles and needs
-│       ├── store.ts            # In-memory data store singleton
+│       ├── store.ts            # Data store (in-memory with file persistence to `.naibour-data/store.json`)
 │       ├── types.ts            # Shared TypeScript types & interfaces
 │       └── utils.ts            # General utility helpers
-├── next.config.ts
+├── next.config.ts              # Security headers (X-Frame-Options, X-XSS-Protection, etc.)
 ├── postcss.config.mjs
 ├── tailwind.config.*
 ├── tsconfig.json
 ├── vercel.json                 # Vercel Cron config (heartbeat at 04:00 UTC)
+├── .eslintrc.json              # ESLint configuration
+├── prisma/
+│   └── schema.prisma           # Prisma schema for optional PostgreSQL backend
+├── scripts/
+│   └── validate-env.mjs        # Environment variable validation script
 └── package.json
 ```
 
@@ -213,6 +221,7 @@ npm run db:migrate  # Create/apply migration (optional)
 | `/community` | Grid view of all community members with trust scores |
 | `/post` | Post what you currently need (AI parses the text) |
 | `/matches` | View AI-proposed trade rings; accept or decline |
+| `/notifications` | Notification center for match alerts and system messages |
 | `/about` | About the Naibour project |
 | `/trust` | How trust scores work |
 | `/signin` | Sign in to an existing profile |
@@ -225,14 +234,20 @@ All API routes are under `/api/`.
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/profiles` | List all user profiles |
+| `POST` | `/api/auth/signin` | Sign in user (returns session cookie) |
+| `GET` | `/api/auth/me` | Get current logged-in user profile |
+| `POST` | `/api/auth/signout` | Sign out and clear session |
+| `GET` | `/api/profiles` | List all user profiles (or single by `?id=`) |
 | `POST` | `/api/profiles` | Create a new user profile |
 | `GET` | `/api/posts` | List all need posts |
-| `POST` | `/api/posts` | Submit a new need post (AI parses it) |
+| `POST` | `/api/posts` | Submit a new need post (AI parses it; triggers instant matching) |
 | `GET` | `/api/matches` | Fetch current AI-proposed trade rings |
 | `GET` | `/api/trades` | List all trades |
 | `POST` | `/api/trades` | Create a direct or barter trade offer |
 | `PATCH` | `/api/trades` | Accept or decline a trade |
+| `GET` | `/api/notifications` | Get user notifications (supports `?unreadOnly=true`) |
+| `PATCH` | `/api/notifications` | Mark notification(s) as read |
+| `GET` | `/api/health` | Check service health and database status |
 | `POST` | `/api/heartbeat` | Trigger the daily AI matching heartbeat |
 | `POST` | `/api/instant-match` | Manually trigger the AI matching agent |
 
@@ -314,7 +329,11 @@ The `vercel.json` at the project root schedules the heartbeat:
 }
 ```
 
-> ⚠️ **Data Persistence:** The current store is in-memory. Data resets on every server restart or new deployment. For production use, swap `src/lib/store.ts` with a persistent database (e.g., PostgreSQL, MongoDB, or a Vercel KV store).
+### Data Persistence
+
+**File-backed storage (default):** Data is persisted to `.naibour-data/store.json` on every change. This survives server restarts during development and on Vercel during the deployment window. Ideal for prototyping and demos.
+
+**PostgreSQL (production-ready):** For production deployments with guaranteed persistence across restarts and deployments, set `DATABASE_URL` to a PostgreSQL connection string. Prisma schema is in `prisma/schema.prisma`. Run `npm run db:push` to sync schema.
 
 ---
 
