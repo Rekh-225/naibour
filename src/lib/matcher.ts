@@ -306,9 +306,15 @@ export function findTradeRings(
       seen.add(canonical);
 
       // Validate: no offer_ref or need_ref reused within ring
+      const participants = new Set(cycle.users);
       const offers = new Set(cycle.edges.map((e) => `${e.fromUserId}:${e.fromOffer}`));
       const needs = new Set(cycle.edges.map((e) => `${e.toUserId}:${e.toNeed}`));
-      if (offers.size === cycle.edges.length && needs.size === cycle.edges.length) {
+      const isValidRing =
+        participants.size === cycle.edges.length &&
+        offers.size === cycle.edges.length &&
+        needs.size === cycle.edges.length;
+
+      if (isValidRing) {
         uniqueCycles.push(cycle);
       }
     }

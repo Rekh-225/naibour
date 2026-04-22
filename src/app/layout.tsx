@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import NavBar from "@/components/NavBar";
+import HeartbeatAutoRunner from "@/components/HeartbeatAutoRunner";
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
 
 export const metadata: Metadata = {
   title: "Naibour — AI-Powered Exchange Network",
@@ -16,14 +23,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body className="min-h-screen antialiased">
+      <body className={`${inter.className} min-h-screen antialiased`}>
         <AuthProvider>
+          <HeartbeatAutoRunner />
           <NavBar />
           <main>{children}</main>
           <footer className="border-t border-[var(--card-border)] mt-20">

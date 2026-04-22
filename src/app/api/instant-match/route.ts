@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { store } from "@/lib/store";
 import { buildCompatibilityGraph, findTradeRings } from "@/lib/matcher";
-import { GraphEdge } from "@/lib/types";
 
 export interface DirectMatch {
   type: "exact" | "close";

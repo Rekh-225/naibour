@@ -21,28 +21,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Hydrate from localStorage on mount
+  // Hydrate from backend session on mount
   useEffect(() => {
-    const stored = localStorage.getItem("naibour_profile_id");
-    if (stored) {
-      fetch(`/api/profiles?id=${stored}`)
-        .then((r) => r.json())
-        .then((data) => {
-          const found = (data.profiles as UserProfile[])?.find((p) => p.id === stored);
-          if (found) setProfile(found);
-        })
-        .catch(() => {})
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((data) => {
+        const found = data.profile as UserProfile | null;
+        if (found) {
+          setProfile(found);
+          localStorage.setItem("naibour_profile_id", found.id);
+        } else {
+          localStorage.removeItem("naibour_profile_id");
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   const signIn = async (profileId: string): Promise<boolean> => {
     try {
-      const res = await fetch(`/api/profiles?id=${profileId}`);
+      const res = await fetch("/api/auth/signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profileId }),
+      });
       const data = await res.json();
-      const found = (data.profiles as UserProfile[])?.find((p) => p.id === profileId);
+      const found = data.profile as UserProfile | undefined;
       if (found) {
         setProfile(found);
         localStorage.setItem("naibour_profile_id", found.id);
@@ -57,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = () => {
     setProfile(null);
     localStorage.removeItem("naibour_profile_id");
+    fetch("/api/auth/signout", { method: "POST" }).catch(() => {});
   };
 
   return (

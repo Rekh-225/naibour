@@ -3,11 +3,9 @@ import { store } from "@/lib/store";
 import { runMatchingAgent } from "@/lib/agent";
 import { NeedPost, ParseResponse, ParsedSkill } from "@/lib/types";
 
-const CATEGORIES = [
-  "finance", "education", "home services", "pet care", "technology",
-  "creative services", "food services", "fitness", "maintenance",
-  "language services", "elder care", "errands", "consulting", "goods", "other",
-];
+function normalizeNeedText(rawNeed: string): string {
+  return rawNeed.trim().toLowerCase().replace(/\s+/g, " ");
+}
 
 function localParseNeed(rawNeed: string): ParseResponse {
   const text = rawNeed.toLowerCase();
@@ -89,12 +87,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const normalizedRawNeed = normalizeNeedText(rawNeed);
+    const duplicateOpenNeed = store
+      .getOpenNeeds()
+      .find(
+        (need) =>
+          need.profileId === profileId &&
+          normalizeNeedText(need.rawNeed) === normalizedRawNeed
+      );
+
+    if (duplicateOpenNeed) {
+      return NextResponse.json(
+        {
+          error: "A matching open need already exists for this profile.",
+          existingNeedId: duplicateOpenNeed.id,
+        },
+        { status: 409 }
+      );
+    }
+
     const parsed = await parseNeedSmart(rawNeed);
 
     const newNeed: NeedPost = {
       id: `need-${Date.now()}`,
       profileId,
-      rawNeed,
+      rawNeed: rawNeed.trim(),
       parsedNeeds: parsed.needs,
       urgency: urgency || "medium",
       status: "open",
@@ -103,16 +120,37 @@ export async function POST(request: NextRequest) {
 
     store.addNeed(newNeed);
 
-    // Trigger matching agent automatically after new post (fire-and-forget)
-    runMatchingAgent().catch((err) =>
-      console.error("Auto-matching after post failed:", err)
-    );
+    // Run matching immediately so users get instant feedback.
+    const { result } = await runMatchingAgent();
+    const ringsForUser = result.rings.filter((ring) => ring.participants.includes(profileId));
+
+    if (ringsForUser.length === 0) {
+      store.createNotification({
+        profileId,
+        type: "system",
+        title: "No immediate match yet",
+        message: "We will notify you as soon as a suitable match is found.",
+        relatedNeedId: newNeed.id,
+        dedupeKey: `pending:${profileId}:${newNeed.id}`,
+      });
+
+      return NextResponse.json({
+        need: newNeed,
+        profile,
+        parseConfidence: parsed.confidence,
+        matchesFound: false,
+        rings: [],
+        message: "No immediate match found. We will notify you when a match appears.",
+      });
+    }
 
     return NextResponse.json({
       need: newNeed,
       profile,
       parseConfidence: parsed.confidence,
-      message: `Need posted for ${profile.userName}. Matching agent triggered.`,
+      matchesFound: true,
+      rings: ringsForUser,
+      message: `Need posted for ${profile.userName}. We found ${ringsForUser.length} match${ringsForUser.length > 1 ? "es" : ""} for you.`,
     });
   } catch (error) {
     console.error("Need creation error:", error);

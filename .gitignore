@@ -28,6 +28,9 @@ yarn-error.log*
 # env files
 .env*.local
 
+# local persisted runtime store
+.naibour-data/
+
 # vercel
 .vercel
 

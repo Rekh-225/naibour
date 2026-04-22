@@ -3,16 +3,30 @@
 
 const CHECK_INTERVAL_MS = 60_000; // check every minute
 
-let schedulerStarted = false;
-let lastRunDate: string | null = null;
+const globalCronState = globalThis as unknown as {
+  __naibourSchedulerStarted?: boolean;
+  __naibourLastRunDate?: string | null;
+  __naibourCronInterval?: ReturnType<typeof setInterval>;
+};
+
+if (globalCronState.__naibourSchedulerStarted === undefined) {
+  globalCronState.__naibourSchedulerStarted = false;
+}
+if (globalCronState.__naibourLastRunDate === undefined) {
+  globalCronState.__naibourLastRunDate = null;
+}
+
+function isSchedulerStarted() {
+  return Boolean(globalCronState.__naibourSchedulerStarted);
+}
 
 export function scheduleDailyHeartbeat() {
-  if (schedulerStarted) return;
-  schedulerStarted = true;
+  if (isSchedulerStarted()) return;
+  globalCronState.__naibourSchedulerStarted = true;
 
   console.log("[Cron] Naibour heartbeat scheduler started — daily at 06:00 Budapest time");
 
-  setInterval(async () => {
+  globalCronState.__naibourCronInterval = setInterval(async () => {
     try {
       const now = new Date();
       // Get current Budapest time
@@ -23,8 +37,8 @@ export function scheduleDailyHeartbeat() {
       const dateStr = budapestNow.toDateString();
 
       // Trigger at 6:00 AM Budapest time, once per day
-      if (hour === 6 && minute === 0 && lastRunDate !== dateStr) {
-        lastRunDate = dateStr;
+      if (hour === 6 && minute === 0 && globalCronState.__naibourLastRunDate !== dateStr) {
+        globalCronState.__naibourLastRunDate = dateStr;
         console.log("[Cron] Triggering daily 6 AM heartbeat...");
         const { runHeartbeat } = await import("./agent");
         const result = await runHeartbeat();
@@ -34,4 +48,12 @@ export function scheduleDailyHeartbeat() {
       console.error("[Cron] Heartbeat error:", err);
     }
   }, CHECK_INTERVAL_MS);
+}
+
+export function stopDailyHeartbeatScheduler() {
+  if (globalCronState.__naibourCronInterval) {
+    clearInterval(globalCronState.__naibourCronInterval);
+    globalCronState.__naibourCronInterval = undefined;
+  }
+  globalCronState.__naibourSchedulerStarted = false;
 }

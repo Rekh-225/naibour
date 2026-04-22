@@ -2,6 +2,19 @@ import { MatchResult, AgentStep, MultiTrade, HeartbeatResult, GraphEdge } from "
 import { store } from "./store";
 import { buildCompatibilityGraph, findTradeRings } from "./matcher";
 
+function notifyParticipantsForRing(ring: MultiTrade) {
+  for (const participantId of ring.participants) {
+    store.createNotification({
+      profileId: participantId,
+      type: "match_found",
+      title: "We found a match for you",
+      message: `A ${ring.participants.length}-party trade ring is available for review.`,
+      relatedRingId: ring.id,
+      dedupeKey: `match:${participantId}:${ring.id}`,
+    });
+  }
+}
+
 function logStep(phase: AgentStep["phase"], description: string, data?: unknown) {
   const step: AgentStep = {
     phase,
@@ -217,7 +230,9 @@ export async function runMatchingAgent(): Promise<{
 
     rings = findTradeRings(edges, posts);
   } catch (err) {
-    logStep("reason", `AI scoring encountered an issue, using cached ring data`);
+    logStep("reason", `AI scoring encountered an issue, using cached ring data`, {
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 
   // If AI pipeline found no rings, use guaranteed seed-data rings
@@ -229,6 +244,7 @@ export async function runMatchingAgent(): Promise<{
 
   for (const ring of rings) {
     store.addTrade(ring);
+    notifyParticipantsForRing(ring);
   }
 
   logStep(
@@ -256,7 +272,7 @@ export async function runMatchingAgent(): Promise<{
 
 export async function runHeartbeat(): Promise<HeartbeatResult> {
   const runAt = new Date().toISOString();
-  store.lastHeartbeat = runAt;
+  store.setLastHeartbeat(runAt);
 
   logStep("perceive", `🕕 Daily heartbeat triggered at ${new Date().toLocaleTimeString("hu-HU", { timeZone: "Europe/Budapest" })} Budapest time`);
 

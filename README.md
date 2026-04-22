@@ -42,7 +42,7 @@ The platform was built with a Budapest neighbourhood community in mind but is ge
 | **Marketplace** | Browse all available skills and services offered by community members |
 | **Community Directory** | Discover your neighbours and their trust scores |
 | **Post a Need** | Describe what you need in plain language; AI parses it into structured skills |
-| **AI Matching** | Gemini 2.0 Flash semantically scores offer-need compatibility across the whole network |
+| **AI Matching** | Gemini 2.5 Flash semantically scores offer-need compatibility across the whole network |
 | **Trade Rings** | The AI finds closed cycles (2–4 participants) where everyone gives and receives |
 | **Daily Heartbeat** | An automated cron job runs at 06:00 CET every day to surface new trade rings |
 | **Instant Match** | Manually trigger the AI matching agent without waiting for the next heartbeat |
@@ -81,7 +81,7 @@ Rings are ranked by a **ring score** (bottleneck-weighted), and a greedy disjoin
 | Framework | [Next.js 15](https://nextjs.org/) (App Router, Turbopack) |
 | Language | TypeScript 5 |
 | Styling | Tailwind CSS v4 |
-| AI / LLM | Google Gemini 2.0 Flash via [`@google/generative-ai`](https://www.npmjs.com/package/@google/generative-ai) |
+| AI / LLM | Google Gemini 2.5 Flash via [`@google/generative-ai`](https://www.npmjs.com/package/@google/generative-ai) |
 | Icons | [`lucide-react`](https://lucide.dev/) |
 | Utilities | `clsx`, `tailwind-merge` |
 | Data Store | In-memory singleton (no external database required) |
@@ -162,11 +162,15 @@ Create a `.env.local` file in the project root:
 
 ```env
 GEMINI_API_KEY=your_google_gemini_api_key_here
+GEMINI_MODEL=gemini-2.5-flash
+# Optional (Phase 2): enable PostgreSQL with Prisma
+# DATABASE_URL=postgresql://user:password@host:5432/dbname?schema=public
 ```
 
 > **Important:** Never commit your `.env.local` file. It is already listed in `.gitignore`.
+> If a key was ever exposed, rotate it in Google AI Studio before using this project in production.
 
-The app uses the `gemini-2.0-flash` model, which is available on the free tier of Google AI Studio.
+The app uses the `gemini-2.5-flash` model, which is available on the free tier of Google AI Studio.
 
 ### Running Locally
 
@@ -183,7 +187,19 @@ Other useful commands:
 npm run build    # Production build
 npm start        # Start the production server
 npm run lint     # Run ESLint
+npm run db:generate # Generate Prisma client (optional)
+npm run db:push     # Push schema to DB (optional)
+npm run db:migrate  # Create/apply migration (optional)
 ```
+
+`npm run build` now validates required environment variables before creating a production build.
+
+### Phase 2 (Sessions + Storage)
+
+1. Session-based login is enabled via secure HTTP-only cookies under `/api/auth/*`.
+2. Backend data is persisted locally in `.naibour-data/store.json` by default.
+3. PostgreSQL is opt-in via Prisma (`DATABASE_URL`). If unset, the app keeps using file-backed storage.
+4. Health check endpoint: `/api/health` returns service/database status.
 
 ---
 
@@ -274,8 +290,14 @@ The project is designed to be deployed on **Vercel** with zero configuration.
 
 1. Push your code to GitHub.
 2. Import the repository on [vercel.com](https://vercel.com).
-3. Add the `GEMINI_API_KEY` environment variable in the Vercel project settings.
+3. Add the `GEMINI_API_KEY` environment variable in the Vercel project settings for Production, Preview, and Development.
 4. Deploy — Vercel automatically configures the cron job from `vercel.json`.
+
+### Secrets Best Practices
+
+1. Keep API keys only in environment variables (`.env.local`, Vercel project settings, GitHub Actions secrets if needed).
+2. Do not hardcode API keys in source files or commit secret values to git.
+3. Access `GEMINI_API_KEY` on the server only.
 
 ### Vercel Cron
 

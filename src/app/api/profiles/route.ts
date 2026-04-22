@@ -2,7 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { store } from "@/lib/store";
 import { UserProfile, Offering } from "@/lib/types";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const id = request.nextUrl.searchParams.get("id");
+  if (id) {
+    const profile = store.getProfile(id);
+    if (!profile) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    }
+    return NextResponse.json({ profile, profiles: [profile], count: 1 });
+  }
+
   const profiles = store.getAllProfiles();
   return NextResponse.json({ profiles, count: profiles.length });
 }

@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model UserProfile {
+  id                String      @id
+  userName          String
+  neighborhood      String
+  avatarColor       String?
+  bio               String?
+  openToNegotiation Boolean
+  openToCash        Boolean
+  trustScore        Float
+  verified          Boolean
+  linkedSocials     String[]
+  createdAt         DateTime
+
+  offerings     Offering[]
+  needs         NeedPost[]
+  notifications Notification[]
+  sessions      UserSession[]
+}
+
+model Offering {
+  id          String      @id
+  profileId   String
+  skill       String
+  category    String
+  description String?
+  availability String?
+
+  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+}
+
+model NeedPost {
+  id         String   @id
+  profileId  String
+  rawNeed    String
+  urgency    String?
+  status     String
+  createdAt  DateTime
+  parsedJson Json
+
+  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([status])
+}
+
+model Trade {
+  id             String   @id
+  type           String
+  fromUserId     String?
+  toUserId       String?
+  listingId      String?
+  offerSkill     String?
+  needSkill      String?
+  proposedOffer  String?
+  inReturnFor    String?
+  message        String?
+  participants   String[]
+  edgesJson      Json?
+  averageConfidence Float?
+  score          Float?
+  status         String
+  acceptedBy     String[]
+  declinedBy     String[]
+  heartbeatRun   DateTime?
+  createdAt      DateTime
+
+  @@index([type])
+  @@index([status])
+}
+
+model Notification {
+  id            String   @id
+  profileId     String
+  type          String
+  title         String
+  message       String
+  read          Boolean
+  createdAt     DateTime
+  relatedNeedId String?
+  relatedRingId String?
+  dedupeKey     String?
+
+  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([read])
+  @@unique([profileId, dedupeKey])
+}
+
+model UserSession {
+  token     String   @id
+  profileId String
+  createdAt DateTime
+  expiresAt DateTime
+
+  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([expiresAt])
+}
+
+model AgentState {
+  id            String   @id @default("global")
+  lastHeartbeat DateTime?
+  updatedAt     DateTime @updatedAt
+}

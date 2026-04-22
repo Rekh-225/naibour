@@ -43,6 +43,28 @@ export interface NeedPost {
   createdAt: string;
 }
 
+export type NotificationType = "match_found" | "system";
+
+export interface AppNotification {
+  id: string;
+  profileId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+  relatedNeedId?: string;
+  relatedRingId?: string;
+  dedupeKey?: string;
+}
+
+export interface UserSession {
+  token: string;
+  profileId: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
 // ─── Legacy compat alias (used by matcher/agent internals) ──────
 export interface UserPost {
   id: string;

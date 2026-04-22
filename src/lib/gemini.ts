@@ -1,11 +1,53 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ParseResponse, CompatibilityScore } from "./types";
 
-const GEMINI_API_KEY = "AIzaSyDr_O1CBAliI-gj4dNAiAT4ekITDeRCb38";
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const GEMINI_MODEL =
+  (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
+    ?.GEMINI_MODEL || "gemini-2.5-flash";
+const GEMINI_TIMEOUT_MS = 30_000;
+
+type GeminiTextResult = {
+  response: {
+    text: () => string;
+  };
+};
+
+function getGeminiApiKey(): string {
+  const key =
+    (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
+      ?.GEMINI_API_KEY;
+
+  if (!key) {
+    throw new Error(
+      "Missing GEMINI_API_KEY. Add it to .env.local for local development and Vercel Environment Variables for deployment."
+    );
+  }
+
+  return key;
+}
+
+function getClient(): GoogleGenerativeAI {
+  return new GoogleGenerativeAI(getGeminiApiKey());
+}
+
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => {
+        reject(new Error(`Gemini request timed out after ${ms}ms`));
+      }, ms);
+    });
+
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+  }
+}
 
 function getModel() {
-  return genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  return getClient().getGenerativeModel({ model: GEMINI_MODEL });
 }
 
 export async function parsePost(
@@ -35,7 +77,10 @@ Rules:
 - If something is ambiguous, still extract your best guess but lower the confidence`;
 
   try {
-    const result = await model.generateContent(prompt);
+    const result = (await withTimeout(
+      model.generateContent(prompt),
+      GEMINI_TIMEOUT_MS
+    )) as GeminiTextResult;
     const text = result.response.text().trim();
     const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const parsed = JSON.parse(cleaned) as ParseResponse;
@@ -52,7 +97,10 @@ Rules:
   } catch (error) {
     // Retry once on failure
     try {
-      const result = await model.generateContent(prompt + "\n\nIMPORTANT: Respond with ONLY valid JSON. No explanation, no markdown.");
+      const result = (await withTimeout(
+        model.generateContent(prompt + "\n\nIMPORTANT: Respond with ONLY valid JSON. No explanation, no markdown."),
+        GEMINI_TIMEOUT_MS
+      )) as GeminiTextResult;
       const text = result.response.text().trim();
       const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       return JSON.parse(cleaned) as ParseResponse;
@@ -98,7 +146,10 @@ Scoring guide:
 Key rule: The SUBJECT MATTER must match. Shared format words like "lessons", "repair", "tutoring" do not make a match — the actual skill must be the same or very similar.`;
 
   try {
-    const result = await model.generateContent(prompt);
+    const result = (await withTimeout(
+      model.generateContent(prompt),
+      GEMINI_TIMEOUT_MS
+    )) as GeminiTextResult;
     const text = result.response.text().trim();
     const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const parsed = JSON.parse(cleaned) as CompatibilityScore;
@@ -167,7 +218,10 @@ Scoring guide:
 Key rule: The SUBJECT MATTER must match. Shared format words like "lessons", "repair", "tutoring" do not make a match — the actual skill must be the same or very similar.`;
 
   try {
-    const result = await model.generateContent(prompt);
+    const result = (await withTimeout(
+      model.generateContent(prompt),
+      GEMINI_TIMEOUT_MS
+    )) as GeminiTextResult;
     const text = result.response.text().trim();
     const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const parsed = JSON.parse(cleaned) as Array<{
